@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreetSmart — Sign in</title>
+  <link rel="stylesheet" href="css/styles.css?v=2">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 500: '#3B82F6', 600: '#2563EB' },
+            cyan:  { 500: '#06B6D4' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .display { font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.02em; font-weight: 700; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* Floating label effect */
+    .input-field:focus-within label,
+    .input-field input:not(:placeholder-shown) + label {
+      transform: translateY(-1.25rem) scale(0.85);
+      color: #60A5FA;
+    }
+
+    /* Subtle scrollbar for the app views */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #0A1628; }
+    ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 5px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+  </style>
+</head>
+<body class="bg-slate-950 font-sans antialiased text-slate-200 min-h-screen">
+
+  <!-- ============ APP ROOT (used after login) ============ -->
+  <div id="app-root" class="hidden"></div>
+
+  <!-- ============ LOGIN SCREEN ============ -->
+  <div id="login-screen" class="flex h-screen w-full">
+
+    <!-- LEFT SIDE: Immersive Branding -->
+    <div class="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-blue-900 via-slate-900 to-slate-950 p-12 flex-col justify-between overflow-hidden">
+      <div class="absolute -top-40 -left-40 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
+      <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-cyan-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" style="animation-delay: 2s;"></div>
+
+      <div class="flex items-center gap-3 z-10">
+        <div class="h-10 w-10 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+          <svg class="w-6 h-6 text-white" viewBox="0 0 32 32" fill="none">
+            <rect x="3" y="10" width="26" height="4" rx="1.5" fill="currentColor" opacity="0.85"/>
+            <rect x="6" y="6" width="20" height="3" rx="1.5" fill="currentColor"/>
+            <rect x="10" y="2" width="12" height="3" rx="1.5" fill="currentColor" opacity="0.6"/>
+            <path d="M8 20l8 8 8-8-8-4-8 4z" fill="currentColor"/>
+          </svg>
+        </div>
+        <span class="text-xl font-bold tracking-wider text-white">StreetSmart</span>
+      </div>
+
+      <div class="max-w-md z-10 my-auto">
+        <h1 class="text-5xl font-extrabold text-white leading-tight tracking-tight mb-6 display">
+          One platform for<br>
+          <span class="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400">every street vendor.</span>
+        </h1>
+        <p class="text-slate-300 text-lg leading-relaxed">
+          Predict demand, manage stock, and reorder from suppliers — all in one AI-powered workspace built for South African street vendors.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-6 text-sm text-slate-400 font-medium z-10 border-t border-slate-800/60 pt-6">
+        <div class="flex items-center gap-2"><span class="w-2 h-2 bg-emerald-500 rounded-full"></span> <span class="text-slate-300">Demand forecasting</span></div>
+        <div class="flex items-center gap-2"><span class="w-2 h-2 bg-blue-500 rounded-full"></span> <span class="text-slate-300">Smart reorders</span></div>
+        <div class="flex items-center gap-2"><span class="w-2 h-2 bg-cyan-500 rounded-full"></span> <span class="text-slate-300">Supplier discounts</span></div>
+      </div>
+    </div>
+
+    <!-- RIGHT SIDE: Login Form -->
+    <div class="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-slate-950 overflow-y-auto">
+      <div class="w-full max-w-md space-y-8">
+
+        <div>
+          <div class="flex lg:hidden items-center gap-2 mb-6">
+            <div class="h-8 w-8 bg-blue-500 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-white" viewBox="0 0 32 32" fill="none">
+                <rect x="3" y="10" width="26" height="4" rx="1.5" fill="currentColor" opacity="0.85"/>
+                <rect x="6" y="6" width="20" height="3" rx="1.5" fill="currentColor"/>
+                <path d="M8 20l8 8 8-8-8-4-8 4z" fill="currentColor"/>
+              </svg>
+            </div>
+            <span class="text-lg font-bold text-white">StreetSmart</span>
+          </div>
+
+          <h2 class="text-3xl font-bold text-white tracking-tight display">Welcome back</h2>
+          <p class="mt-2 text-sm text-slate-400">Sign in to access your vendor, supplier, or administrator dashboard.</p>
+        </div>
+
+        <form class="space-y-6" id="login-form" onsubmit="handleLogin(event)">
+
+          <div class="relative input-field border-b border-slate-700 focus-within:border-blue-500 pt-5 transition-colors duration-300">
+            <input type="email" id="login-email" required placeholder=" " class="w-full bg-transparent pb-2 text-white placeholder-transparent focus:outline-none text-base" autocomplete="username">
+            <label for="login-email" class="absolute left-0 top-5 text-slate-500 transition-all duration-300 transform origin-top-left pointer-events-none">Email address</label>
+          </div>
+
+          <div class="relative input-field border-b border-slate-700 focus-within:border-blue-500 pt-5 transition-colors duration-300">
+            <div class="flex items-center justify-between">
+              <input type="password" id="login-password" required placeholder=" " class="w-full bg-transparent pb-2 text-white placeholder-transparent focus:outline-none text-base" autocomplete="current-password">
+              <button type="button" id="toggle-pwd" class="pb-2 text-slate-500 hover:text-slate-300 focus:outline-none text-sm font-medium transition-colors">Show</button>
+            </div>
+            <label for="login-password" class="absolute left-0 top-5 text-slate-500 transition-all duration-300 transform origin-top-left pointer-events-none">Password</label>
+          </div>
+
+          <div id="login-error" class="text-red-400 text-sm font-medium min-h-[20px]"></div>
+
+          <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white py-3 px-4 rounded-xl font-semibold shadow-lg shadow-blue-600/20 transition-all duration-200 flex justify-center items-center gap-2">
+            <span>Sign in to Dashboard</span>
+          </button>
+        </form>
+
+        <!-- Demo accounts -->
+        <div class="pt-6 border-t border-slate-800">
+          <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Demo accounts — click to autofill</div>
+          <div class="space-y-2">
+            <button type="button" class="demo-fill w-full text-left bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 px-4 py-3 rounded-xl text-sm transition-all" data-email="vendor@streetsmart.co.za" data-pass="vendor123">
+              <strong class="text-blue-400">Vendor</strong> <span class="text-slate-400 ml-2">vendor@streetsmart.co.za / vendor123</span>
+            </button>
+            <button type="button" class="demo-fill w-full text-left bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 px-4 py-3 rounded-xl text-sm transition-all" data-email="supplier@streetsmart.co.za" data-pass="supplier123">
+              <strong class="text-blue-400">Supplier</strong> <span class="text-slate-400 ml-2">supplier@streetsmart.co.za / supplier123</span>
+            </button>
+            <button type="button" class="demo-fill w-full text-left bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 px-4 py-3 rounded-xl text-sm transition-all" data-email="admin@streetsmart.co.za" data-pass="admin123">
+              <strong class="text-blue-400">Administrator</strong> <span class="text-slate-400 ml-2">admin@streetsmart.co.za / admin123</span>
+            </button>
+          </div>
+        </div>
+
+        <p class="text-center text-xs text-slate-500">
+          StreetSmart — AI-Powered Street Vendor Inventory Management · Group 6
+        </p>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ APP SHELL (revealed after login) ============ -->
+  <div id="app-shell" class="hidden min-h-screen">
+    <div class="grid grid-cols-1 lg:grid-cols-[260px_1fr] min-h-screen">
+
+      <!-- Sidebar -->
+      <aside class="bg-gradient-to-b from-slate-900 to-slate-950 border-r border-slate-800/60 p-6 flex flex-col gap-6 sticky top-0 h-screen overflow-y-auto">
+        <div class="flex items-center gap-3 pb-6 border-b border-slate-800/60">
+          <div class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 flex-shrink-0">
+            <svg class="w-6 h-6 text-white" viewBox="0 0 32 32" fill="none">
+              <rect x="3" y="10" width="26" height="4" rx="1.5" fill="currentColor" opacity="0.85"/>
+              <rect x="6" y="6" width="20" height="3" rx="1.5" fill="currentColor"/>
+              <path d="M8 20l8 8 8-8-8-4-8 4z" fill="currentColor"/>
+            </svg>
+          </div>
+          <span class="text-lg font-bold text-white display">StreetSmart</span>
+        </div>
+
+        <div id="sidebar-user" class="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center gap-3"></div>
+
+        <nav id="sidebar-nav" class="flex flex-col gap-1 flex-1"></nav>
+
+        <div class="pt-5 border-t border-slate-800/60">
+          <div class="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">AI Operations Suite</div>
+          <div class="text-[10px] text-slate-600 mono mt-1">v1.0</div>
+        </div>
+      </aside>
+
+      <!-- Main area -->
+      <div class="flex flex-col min-h-screen">
+        <header class="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-md border-b border-slate-800/60 px-6 lg:px-8 py-5 grid grid-cols-1 md:grid-cols-[1fr_auto] items-center gap-4">
+          <div id="page-title">
+            <h1 class="text-2xl text-white display">Dashboard</h1>
+            <p class="text-xs text-slate-500">Everything here</p>
+          </div>
+          <div id="session-bar" class="flex items-center gap-3 justify-end"></div>
+        </header>
+
+        <main class="flex-1 px-6 lg:px-8 py-8 max-w-[1400px] w-full mx-auto" id="views"></main>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SCRIPTS ============ -->
+  <script src="js/data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/login.js"></script>
+  <script src="js/vendor-views.js"></script>
+  <script src="js/supplier-views.js"></script>
+  <script src="js/admin-views.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

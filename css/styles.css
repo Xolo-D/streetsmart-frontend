@@ -1,0 +1,581 @@
+/* ============================================================
+   StreetSmart — Cream White + Black Theme
+   Login: dark blue (kept)
+   Dashboard: cream white with black text
+   ============================================================ */
+
+:root{
+  --ink:        #000000;
+  --ink-soft:   #1A1A1A;
+  --muted:      #4A4A4A;
+  --muted-2:    #6B6B6B;
+  --bg:         #F5F0E1;
+  --bg-soft:    #ECE3CC;
+  --panel:      #FBF8EF;
+  --panel-hover:#F1EAD5;
+  --line:       rgba(0,0,0,0.12);
+  --line-2:     rgba(0,0,0,0.22);
+
+  --brand:      #C4432B;
+  --brand-2:    #E26A3D;
+  --brand-soft: #FFE4DB;
+
+  --success:    #4C6B3F;
+  --success-soft: #DCE3D2;
+  --warning:    #D89A2E;
+  --warning-soft: #F1E1BE;
+  --danger:     #C4432B;
+  --danger-soft: #E8D2C8;
+
+  --cat-1:#C4432B; --cat-2:#D89A2E; --cat-3:#4C6B3F; --cat-4:#2B4C6F;
+  --cat-5:#8C3B2E; --cat-6:#B5657D; --cat-7:#5B6770; --cat-8:#3E6E8E;
+  --cat-9:#6E7B3F; --cat-10:#8A7CA8;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow:    0 4px 12px rgba(0,0,0,0.08);
+  --shadow-md: 0 10px 24px rgba(0,0,0,0.10);
+  --shadow-lg: 0 20px 40px rgba(0,0,0,0.12);
+}
+
+*{box-sizing:border-box;}
+html{-webkit-font-smoothing:antialiased;}
+
+body{
+  margin:0;
+  min-height:100vh;
+  background: #F5F0E1;
+  background-image: radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px);
+  background-size: 22px 22px;
+  color: #000;
+  font-family:'Inter', system-ui, sans-serif;
+  line-height:1.55;
+  font-size:14px;
+}
+
+.display{font-family:'Space Grotesk', sans-serif; letter-spacing:-0.02em; font-weight:700; color:#000;}
+.mono{font-family:'JetBrains Mono', monospace;}
+a{color:inherit;}
+
+/* ============================================================
+   LOGIN PAGE — Keep dark blue
+   ============================================================ */
+#login-screen{
+  background: #020617 !important;
+  background-image: none !important;
+  color: #E2E8F0;
+}
+#login-screen .bg-slate-950{ background: #020617 !important; }
+#login-screen .bg-slate-900{ background: #0F172A !important; }
+#login-screen h2,
+#login-screen h1,
+#login-screen .text-white{ color: #F1F5F9 !important; }
+#login-screen .text-slate-300{ color: #CBD5E1 !important; }
+#login-screen .text-slate-400{ color: #94A3B8 !important; }
+#login-screen .text-slate-500{ color: #64748B !important; }
+#login-screen .text-red-400{ color: #F87171 !important; }
+
+/* ============================================================
+   APP SHELL — CREAM WHITE + BLACK
+   ============================================================ */
+
+#app-shell{
+  background: #F5F0E1 !important;
+  min-height: 100vh;
+  color: #000;
+}
+
+/* --- Sidebar: cream with black text --- */
+#app-shell aside{
+  background: #FBF8EF !important;
+  border-right: 1px solid rgba(0,0,0,0.12) !important;
+}
+#app-shell aside *{
+  color: #000 !important;
+}
+#app-shell aside .text-slate-500,
+#app-shell aside .text-slate-600{
+  color: #4A4A4A !important;
+}
+
+/* Sidebar logo tile — coral gradient */
+#app-shell aside > div:first-child > div:first-child{
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%) !important;
+  color: #fff !important;
+}
+#app-shell aside > div:first-child > div:first-child svg{
+  color: #fff !important;
+  fill: #fff !important;
+}
+#app-shell aside > div:first-child > div:first-child svg *{
+  fill: #fff !important;
+}
+
+/* User card */
+#sidebar-user{
+  background: var(--brand-soft) !important;
+  border: 1px solid rgba(196,67,43,0.25) !important;
+  color: #000 !important;
+}
+#sidebar-user *{ color: #000 !important; }
+#sidebar-user > div:first-child{
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%) !important;
+  color: #fff !important;
+}
+
+/* Sidebar nav */
+#sidebar-nav button{
+  background: transparent;
+  border: none;
+  padding: 12px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #000 !important;
+  text-align: left;
+  width: 100%;
+  transition: all 0.15s;
+}
+#sidebar-nav button:hover:not(.active){
+  background: rgba(196,67,43,0.08) !important;
+  color: #000 !important;
+}
+#sidebar-nav button.active{
+  background: linear-gradient(135deg, rgba(196,67,43,0.15) 0%, rgba(226,106,61,0.08) 100%) !important;
+  color: var(--brand) !important;
+  box-shadow: inset 3px 0 0 var(--brand) !important;
+}
+
+/* Sidebar footer */
+#app-shell aside > div:last-child{
+  border-top: 1px solid rgba(0,0,0,0.12) !important;
+}
+#app-shell aside > div:last-child *{
+  color: #4A4A4A !important;
+}
+
+/* --- Top bar: cream with black text --- */
+#app-shell header{
+  background: rgba(251,248,239,0.95) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0,0,0,0.12) !important;
+}
+#app-shell header *{
+  color: #000 !important;
+}
+#app-shell header #page-title p{
+  color: #4A4A4A !important;
+}
+
+/* Session badge */
+#session-bar span:first-child{
+  background: var(--brand-soft) !important;
+  color: var(--brand) !important;
+  border: 1px solid rgba(196,67,43,0.30) !important;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+#session-bar button#logout-btn{
+  background: #FBF8EF !important;
+  border: 1px solid rgba(0,0,0,0.20) !important;
+  color: #000 !important;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+#session-bar button#logout-btn:hover{
+  border-color: var(--brand) !important;
+  color: var(--brand) !important;
+}
+#session-bar select{
+  background: #FBF8EF !important;
+  border: 1px solid rgba(0,0,0,0.20) !important;
+  color: #000 !important;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* --- Main content: cream with black text --- */
+#app-shell main,
+main#views{
+  background: #F5F0E1 !important;
+  background-image: radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px) !important;
+  background-size: 22px 22px !important;
+  padding: 28px 32px 60px;
+  flex: 1;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  color: #000 !important;
+}
+
+@media (max-width: 900px){
+  #app-shell main,
+  main#views{ padding: 20px; }
+}
+
+/* ============================================================
+   PANELS — cream with black text
+   ============================================================ */
+.panel{
+  background: #FBF8EF !important;
+  border: 1px solid rgba(0,0,0,0.12) !important;
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  padding: 26px 28px;
+  margin-bottom: 22px;
+  color: #000 !important;
+}
+.panel:hover{
+  box-shadow: var(--shadow);
+}
+.panel h2{
+  font-family:'Space Grotesk', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: #000 !important;
+}
+.panel .sub{
+  font-size: 13px;
+  color: #4A4A4A !important;
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding: 14px 0 26px;
+}
+.hero-figure .label{
+  font-size: 12px;
+  color: #4A4A4A !important;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+.hero-figure .num{
+  font-family:'Space Grotesk', sans-serif;
+  font-size: 76px;
+  line-height: 0.85;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #000 !important;
+  background: none !important;
+  -webkit-text-fill-color: #000 !important;
+}
+.hero-figure .num .unit{
+  font-size: 28px;
+  margin-right: 4px;
+  color: var(--brand) !important;
+  background: none !important;
+  -webkit-text-fill-color: var(--brand) !important;
+}
+.hero-sub{
+  font-size: 14px;
+  color: #000 !important;
+  max-width: 340px;
+  padding: 14px 18px;
+  background: var(--brand-soft) !important;
+  border-radius: 14px;
+  border: 1px solid rgba(196,67,43,0.20);
+  line-height: 1.55;
+}
+
+/* ============================================================
+   KPI CARDS — cream with black text
+   ============================================================ */
+.kpi-row{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  margin-top: 22px;
+}
+@media (max-width: 900px){
+  .kpi-row{ grid-template-columns: repeat(2, 1fr); }
+}
+.kpi{
+  background: #FBF8EF !important;
+  border: 1px solid rgba(0,0,0,0.12) !important;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  color: #000 !important;
+}
+.kpi:hover{
+  box-shadow: var(--shadow);
+  border-color: rgba(196,67,43,0.30) !important;
+}
+.kpi .v{
+  font-family:'Space Grotesk', sans-serif;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 700;
+  color: #000 !important;
+  letter-spacing: -0.02em;
+}
+.kpi .l{
+  font-size: 12px;
+  color: #4A4A4A !important;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+/* ============================================================
+   STAT STRIP — cream with black text
+   ============================================================ */
+.stat-strip{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+@media (max-width: 900px){
+  .stat-strip{ grid-template-columns: repeat(2, 1fr); }
+}
+.stat-strip .cell{
+  background: #FBF8EF !important;
+  border: 1px solid rgba(0,0,0,0.12) !important;
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  color: #000 !important;
+}
+.stat-strip .cell::before{
+  content:'';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--brand) 0%, var(--brand-2) 100%);
+}
+.stat-strip .cell:hover{
+  box-shadow: var(--shadow);
+}
+.stat-strip .v{
+  font-family:'Space Grotesk', sans-serif;
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 700;
+  color: #000 !important;
+  letter-spacing: -0.02em;
+}
+.stat-strip .l{
+  font-size: 12px;
+  color: #4A4A4A !important;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+/* ============================================================
+   GRIDS
+   ============================================================ */
+.grid{ display: grid; gap: 22px; }
+.grid.grid-2{ grid-template-columns: 1.5fr 1fr; }
+.grid.grid-3{ grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 1100px){
+  .grid.grid-2{ grid-template-columns: 1fr; }
+}
+@media (max-width: 900px){
+  .grid.grid-3{ grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   CHARTS
+   ============================================================ */
+.chart-wrap{ position: relative; width: 100%; }
+canvas{ max-width: 100%; }
+
+/* ============================================================
+   TABLES — cream with black text
+   ============================================================ */
+table{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  color: #000 !important;
+}
+th{
+  text-align: left;
+  font-weight: 600;
+  font-size: 11.5px;
+  color: #4A4A4A !important;
+  padding: 12px 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(0,0,0,0.15) !important;
+  background: #ECE3CC !important;
+}
+th:first-child{ border-top-left-radius: 10px; }
+th:last-child{ border-top-right-radius: 10px; }
+td{
+  padding: 14px;
+  border-bottom: 1px solid rgba(0,0,0,0.08) !important;
+  color: #1A1A1A !important;
+}
+tr:hover td{ background: #F1EAD5 !important; }
+td.num, th.num{
+  text-align: right;
+  font-family:'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  color: #000 !important;
+  font-weight: 500;
+}
+.name-cell{ font-weight: 600; color: #000 !important; }
+.sub-cell{ color: #4A4A4A !important; font-size: 11.5px; margin-top: 2px; }
+
+.table-scroll{
+  max-height: 520px;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.10);
+}
+.table-scroll table{ margin-top: 0; }
+.table-scroll thead th{
+  position: sticky;
+  top: 0;
+  background: #ECE3CC;
+  z-index: 1;
+}
+
+/* ============================================================
+   CHIPS
+   ============================================================ */
+.chip{
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: none;
+}
+.chip.high{ background: #E8D2C8; color: #8B2E1E; }
+.chip.medium{ background: #F1E1BE; color: #7A5610; }
+.chip.low{ background: #DCE3D2; color: #2F4A26; }
+.chip.order{ background: #E8D2C8; color: #8B2E1E; }
+.chip.soon{ background: #F1E1BE; color: #7A5610; }
+.chip.none{ background: #DCE3D2; color: #2F4A26; }
+
+/* ============================================================
+   FILTERS
+   ============================================================ */
+.filter-row{
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.filter-btn{
+  font-family:'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #ECE3CC;
+  border: 1px solid rgba(0,0,0,0.20);
+  color: #000 !important;
+  padding: 8px 16px;
+  border-radius: 10px;
+  transition: all 0.15s;
+}
+.filter-btn:hover{
+  border-color: var(--brand);
+  color: var(--brand) !important;
+}
+.filter-btn.active{
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+/* ============================================================
+   SWATCHES
+   ============================================================ */
+.swatch{
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  border-radius: 3px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* ============================================================
+   VIEWS
+   ============================================================ */
+#views section.view{ display: none; }
+#views section.view.active{
+  display: block !important;
+  animation: fadein 0.3s ease;
+}
+@keyframes fadein{
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   MODALS — cream with black text
+   ============================================================ */
+body > div[style*="position:fixed"] > div{
+  background: #FBF8EF !important;
+  border: 1px solid rgba(0,0,0,0.15) !important;
+  color: #000 !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+body > div[style*="position:fixed"] h2{ color: #000 !important; }
+body > div[style*="position:fixed"] p{ color: #4A4A4A !important; }
+body > div[style*="position:fixed"] label{ color: #000 !important; }
+body > div[style*="position:fixed"] input,
+body > div[style*="position:fixed"] select,
+body > div[style*="position:fixed"] textarea{
+  background: #F5F0E1 !important;
+  color: #000 !important;
+  border: 1px solid rgba(0,0,0,0.15) !important;
+}
+body > div[style*="position:fixed"] input:focus,
+body > div[style*="position:fixed"] select:focus{
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px rgba(196,67,43,0.15) !important;
+}
+body > div[style*="position:fixed"] strong{ color: #000 !important; }
+body > div[style*="position:fixed"] .filter-btn:not(.active){
+  background: #ECE3CC !important;
+  color: #000 !important;
+  border-color: rgba(0,0,0,0.20) !important;
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar{ width: 10px; height: 10px; }
+::-webkit-scrollbar-track{ background: #F5F0E1; }
+::-webkit-scrollbar-thumb{ background: #ECE3CC; border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover{ background: #D9CFB5; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 900px){
+  #app-shell aside{ display: none; }
+}
