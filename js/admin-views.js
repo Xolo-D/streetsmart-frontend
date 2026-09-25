@@ -1,11 +1,11 @@
-// js/admin-views.js
+﻿// js/admin-views.js
 
 /* ==================== ADMIN OVERVIEW ==================== */
 
 function renderAdminOverview(){
   const el = document.getElementById('view-adm-overview');
   const k = DATA.kpis;
-  el.innerHTML = '<div class="hero"><div class="hero-figure"><div class="label">Network-wide revenue, ' + k.date_start + ' — ' + k.date_end + '</div><div class="num display"><span class="unit">R</span>' + (k.total_revenue/1000000).toFixed(2) + '<span class="unit" style="font-size:32px;color:var(--ink);margin-left:4px;">M</span></div></div><div class="hero-sub">' + k.num_vendors + ' vendor accounts and ' + DATA.suppliers.length + ' supplier accounts under management across ' + k.num_cities + ' cities.</div></div>'
+  el.innerHTML = '<div class="hero"><div class="hero-figure"><div class="label">Network-wide revenue, ' + k.date_start + ' â€” ' + k.date_end + '</div><div class="num display"><span class="unit">R</span>' + (k.total_revenue/1000000).toFixed(2) + '<span class="unit" style="font-size:32px;color:var(--ink);margin-left:4px;">M</span></div></div><div class="hero-sub">' + k.num_vendors + ' vendor accounts and ' + DATA.suppliers.length + ' supplier accounts under management across ' + k.num_cities + ' cities.</div></div>'
     + '<div class="kpi-row"><div class="kpi"><div class="v">' + k.num_vendors + '</div><div class="l">Vendor accounts</div></div><div class="kpi"><div class="v">' + DATA.suppliers.length + '</div><div class="l">Supplier accounts</div></div><div class="kpi"><div class="v">' + k.num_products + '</div><div class="l">Products in catalogue</div></div><div class="kpi"><div class="v">' + fmtNum(k.total_transactions) + '</div><div class="l">Transactions logged</div></div></div>'
     + '<div class="grid grid-2" style="margin-top:24px;"><div class="panel"><h2>Vendor accounts by city</h2><p class="sub">Where the registered vendor base is concentrated.</p><div class="chart-wrap" style="height:280px;"><canvas id="chart-adm-vendorcity"></canvas></div></div><div class="panel"><h2>Vendor accounts by type</h2><p class="sub">Mix of stall types across the network.</p><div class="chart-wrap" style="height:280px;"><canvas id="chart-adm-vendortype"></canvas></div></div></div>';
 
@@ -33,8 +33,8 @@ function renderAdminVendors(){
       '<h2>Manage vendors</h2>' +
       '<p class="sub">' + DATA.vendors.length + ' vendor accounts, ranked by revenue. Search by vendor ID or city.</p>' +
       '<div class="filter-row">' +
-        '<button id="add-vendor-btn" class="filter-btn active" style="background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;border:none;font-weight:700;padding:10px 20px;">➕ Add vendor</button>' +
-        '<input id="vendor-search" type="text" placeholder="Search vendor ID or city…" class="filter-btn" style="cursor:text; min-width:220px; text-align:left;">' +
+        '<button id="add-vendor-btn" class="filter-btn active" style="background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;border:none;font-weight:700;padding:10px 20px;">âž• Add vendor</button>' +
+        '<input id="vendor-search" type="text" placeholder="Search vendor ID or cityâ€¦" class="filter-btn" style="cursor:text; min-width:220px; text-align:left;">' +
       '</div>' +
       '<div class="table-scroll">' +
         '<table><thead><tr><th>Vendor</th><th>City</th><th>Type</th><th class="num">Revenue</th><th class="num">Transactions</th><th class="num">SKUs sold</th><th>Actions</th></tr></thead>' +
@@ -70,7 +70,7 @@ function renderVendorRows(){
       '</td>' +
     '</tr>'
   ).join('')
-  + (filtered.length > 100 ? '<tr><td colspan="7" class="sub-cell" style="padding:14px 10px;">Showing first 100 matches — refine your search.</td></tr>' : '');
+  + (filtered.length > 100 ? '<tr><td colspan="7" class="sub-cell" style="padding:14px 10px;">Showing first 100 matches â€” refine your search.</td></tr>' : '');
 
   body.querySelectorAll('.edit-vendor-btn').forEach(btn => {
     btn.onclick = () => openEditVendorModal(btn.dataset.id);
@@ -84,7 +84,7 @@ function openAddVendorModal(){ showVendorModal(null); }
 
 function openEditVendorModal(id){
   const vendor = DATA.vendors.find(v => v.id === id);
-  if (!vendor){ alert('❌ Vendor not found'); return; }
+  if (!vendor){ alert('âŒ Vendor not found'); return; }
   showVendorModal(vendor);
 }
 
@@ -145,7 +145,7 @@ function showVendorModal(vendor){
     };
 
     if (!payload.id || !payload.city || !payload.type){
-      errorEl.textContent = '❌ ID, city, and type are required.';
+      errorEl.textContent = 'âŒ ID, city, and type are required.';
       return;
     }
 
@@ -153,16 +153,16 @@ function showVendorModal(vendor){
       if (isEdit){
         const res = await API.updateVendor(vendor.id, payload);
         Object.assign(vendor, res.vendor);
-        alert('✅ Vendor ' + vendor.id + ' updated');
+        alert('âœ… Vendor ' + vendor.id + ' updated');
       } else {
         const res = await API.addVendor(payload);
         DATA.vendors.unshift(res.vendor);
-        alert('✅ Vendor ' + payload.id + ' created');
+        alert('âœ… Vendor ' + payload.id + ' created');
       }
       overlay.remove();
       renderAdminVendors();
     } catch (err){
-      errorEl.textContent = '❌ ' + err.message;
+      errorEl.textContent = 'âŒ ' + err.message;
     }
   };
 }
@@ -175,10 +175,10 @@ async function deleteVendor(id){
   try {
     await API.deleteVendor(id);
     DATA.vendors = DATA.vendors.filter(v => v.id !== id);
-    alert('✅ Vendor ' + id + ' deleted');
+    alert('âœ… Vendor ' + id + ' deleted');
     renderAdminVendors();
   } catch (err){
-    alert('❌ ' + err.message);
+    alert('âŒ ' + err.message);
   }
 }
 
@@ -263,8 +263,8 @@ function renderAdminReports(){
     + DATA.vendors.slice(0,10).map(v => '<tr><td class="name-cell">' + v.id + '</td><td>' + v.city + '</td><td class="num">' + fmtR(v.revenue) + '</td><td class="num">' + v.transactions + '</td></tr>').join('')
     + '</tbody></table></div>'
     + '<div class="filter-row" style="margin-top:22px;">'
-    +   '<button id="adm-export-pdf" class="filter-btn active" style="background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;border:none;font-weight:700;padding:10px 20px;">📄 Download PDF report</button>'
-    +   '<button id="adm-export-csv" class="filter-btn" style="padding:10px 20px;">📥 Export CSV</button>'
+    +   '<button id="adm-export-pdf" class="filter-btn active" style="background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;border:none;font-weight:700;padding:10px 20px;">ðŸ“„ Download PDF report</button>'
+    +   '<button id="adm-export-csv" class="filter-btn" style="padding:10px 20px;">ðŸ“¥ Export CSV</button>'
     + '</div>';
 
   new Chart(document.getElementById('chart-rep-monthly'), {type:'line',data:{labels: DATA.monthly.map(m=>m.month), datasets:[{label:'Revenue', data: DATA.monthly.map(m=>m.revenue), borderColor:VERM, backgroundColor:'rgba(30,78,140,0.15)', fill:true, tension:0.25, pointRadius:3, borderWidth:2.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:LINE},ticks:{callback:v=>fmtR(v)}},x:{grid:{display:false}}}}});
@@ -273,7 +273,7 @@ function renderAdminReports(){
   document.getElementById('adm-export-pdf').onclick = () => {
     const columns = ['Month', 'Revenue', 'Profit', 'Units'];
     const rows = DATA.monthly.map(m => [m.month, fmtR(m.revenue), fmtR(m.profit), fmtNum(m.units)]);
-    exportPDF('Network Annual Report', 'All vendors · All cities · 2025', columns, rows, 'network-report-' + new Date().toISOString().slice(0,10) + '.pdf');
+    exportPDF('Network Annual Report', 'All vendors Â· All cities Â· 2025', columns, rows, 'network-report-' + new Date().toISOString().slice(0,10) + '.pdf');
   };
   document.getElementById('adm-export-csv').onclick = () => {
     const rows = DATA.monthly.map(m => ({Month: m.month, 'Revenue (R)': m.revenue, 'Profit (R)': m.profit, Units: m.units}));
@@ -285,7 +285,7 @@ function renderAdminReports(){
 
 async function renderAdminPending(){
   const el = document.getElementById('view-adm-pending');
-  el.innerHTML = '<div class="panel"><p class="sub">Loading pending registrations…</p></div>';
+  el.innerHTML = '<div class="panel"><p class="sub">Loading pending registrationsâ€¦</p></div>';
 
   let users = [];
   try {
@@ -301,12 +301,12 @@ async function renderAdminPending(){
         '<h2>Pending registrations</h2>' +
         '<p class="sub">No users are waiting for approval right now.</p>' +
         '<div style="text-align:center; padding:60px 20px;">' +
-          '<div style="font-size:56px;">✅</div>' +
+          '<div style="font-size:56px;">âœ…</div>' +
           '<div style="font-weight:700; font-size:20px; margin-top:14px; color:var(--success);">All caught up</div>' +
           '<div style="color:var(--muted); font-size:14px; margin-top:8px;">New signups will appear here.</div>' +
         '</div>' +
         '<div class="filter-row" style="margin-top:22px;">' +
-          '<button class="filter-btn" onclick="renderAdminPending()">🔄 Refresh</button>' +
+          '<button class="filter-btn" onclick="renderAdminPending()">ðŸ”„ Refresh</button>' +
         '</div>' +
       '</div>';
     return;
@@ -317,10 +317,10 @@ async function renderAdminPending(){
       '<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px;">' +
         '<div>' +
           '<h2>Pending registrations</h2>' +
-          '<p class="sub" style="margin:0;">' + users.length + ' user' + (users.length > 1 ? 's' : '') + ' waiting. Click <strong>Review</strong> to assign a store/supplier record and approve.</p>' +
+          '<p class="sub" style="margin:0;">' + users.length + ' user' + (users.length > 1 ? 's' : '') + ' waiting. Click <strong>Review</strong> to see their details and approve.</p>' +
         '</div>' +
         '<div class="filter-row" style="margin:0;">' +
-          '<button class="filter-btn" onclick="renderAdminPending()">🔄 Refresh</button>' +
+          '<button class="filter-btn" onclick="renderAdminPending()">ðŸ”„ Refresh</button>' +
         '</div>' +
       '</div>' +
     '</div>' +
@@ -342,15 +342,15 @@ async function renderAdminPending(){
           '<tbody>' +
             users.map(u =>
               '<tr data-user-id="' + u.id + '">' +
-                '<td class="name-cell">' + (u.name || '—') + '</td>' +
+                '<td class="name-cell">' + (u.name || 'â€”') + '</td>' +
                 '<td>' + u.email + '</td>' +
                 '<td><span class="chip ' + (u.role === 'vendor' ? 'soon' : 'none') + '">' + u.role + '</span></td>' +
-                '<td>' + (u.city || '—') + '</td>' +
-                '<td>' + (u.type || '—') + '</td>' +
+                '<td>' + (u.city || 'â€”') + '</td>' +
+                '<td>' + (u.type || 'â€”') + '</td>' +
                 '<td class="num">' + new Date(u.created_at).toLocaleDateString('en-ZA') + '</td>' +
                 '<td style="display:flex; gap:6px;">' +
-                  '<button class="filter-btn review-btn" data-id="' + u.id + '" data-role="' + u.role + '" data-name="' + (u.name || '').replace(/"/g,'&quot;') + '" data-email="' + u.email + '" style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border:none;">Review</button>' +
-                  '<button class="filter-btn reject-btn" data-id="' + u.id + '" style="color:var(--danger);">✕ Reject</button>' +
+                  '<button class="filter-btn review-btn" data-id="' + u.id + '" data-role="' + u.role + '" data-name="' + (u.name || '').replace(/"/g,'&quot;') + '" data-email="' + u.email + '" data-city="' + (u.city || '') + '" data-type="' + (u.type || '') + '" data-created="' + (u.created_at || '') + '" style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border:none;">Review</button>' +
+                  '<button class="filter-btn reject-btn" data-id="' + u.id + '" style="color:var(--danger);">âœ• Reject</button>' +
                 '</td>' +
               '</tr>'
             ).join('') +
@@ -364,7 +364,10 @@ async function renderAdminPending(){
       id: btn.dataset.id,
       role: btn.dataset.role,
       name: btn.dataset.name,
-      email: btn.dataset.email
+      email: btn.dataset.email,
+      city: btn.dataset.city,
+      type: btn.dataset.type,
+      created_at: btn.dataset.created
     });
   });
 
@@ -372,14 +375,14 @@ async function renderAdminPending(){
     btn.onclick = async () => {
       if (!confirm('Reject and delete this user? This cannot be undone.')) return;
       btn.disabled = true;
-      btn.textContent = '…';
+      btn.textContent = 'â€¦';
       try {
         await API.rejectUser(btn.dataset.id);
         renderAdminPending();
       } catch (err){
-        alert('❌ ' + err.message);
+        alert('âŒ ' + err.message);
         btn.disabled = false;
-        btn.textContent = '✕ Reject';
+        btn.textContent = 'âœ• Reject';
       }
     };
   });
@@ -391,87 +394,61 @@ async function openReviewModal(user){
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
 
-  const header =
-    '<h2 style="font-family:\'Space Grotesk\'; font-size:22px; margin:0 0 6px; color:#000;">Review registration</h2>' +
-    '<p style="font-size:13px; color:#4A4A4A; margin:0 0 20px;">' +
-      '<strong>' + (user.name || '—') + '</strong> · ' + user.email + ' · <span class="chip ' + (user.role === 'vendor' ? 'soon' : 'none') + '">' + user.role + '</span>' +
-    '</p>';
-
-  const loading = '<div id="review-body" style="padding:30px 0; text-align:center; color:#6B6B6B;">Loading available ' + (user.role === 'vendor' ? 'stores' : 'suppliers') + '…</div>';
+  const roleIcon = user.role === 'vendor' ? 'ðŸª' : 'ðŸšš';
+  const roleLabel = user.role === 'vendor' ? 'Vendor store' : 'Supplier';
 
   overlay.innerHTML = '<div style="background:#FBF8EF; border:1px solid rgba(0,0,0,0.15); border-radius:20px; max-width:560px; width:100%; padding:32px; max-height:90vh; overflow-y:auto;">' +
-    header + loading +
-    '<div id="review-error" style="color:#C4432B; font-size:13px; min-height:18px; margin-top:14px;"></div>' +
-    '<div style="display:flex; gap:10px; margin-top:14px;">' +
+    '<div style="display:flex; align-items:flex-start; gap:14px; margin-bottom:20px;">' +
+      '<div style="font-size:32px; flex-shrink:0;">' + roleIcon + '</div>' +
+      '<div>' +
+        '<h2 style="font-family:\'Space Grotesk\'; font-size:22px; margin:0 0 4px; color:#000;">Approve registration</h2>' +
+        '<p style="font-size:13px; color:#4A4A4A; margin:0;">' +
+          '<strong>' + (user.name || 'â€”') + '</strong> Â· ' + user.email +
+        '</p>' +
+      '</div>' +
+    '</div>' +
+
+    '<div style="padding:18px; background:#F5F0E1; border-radius:12px; margin-bottom:20px;">' +
+      '<div style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:#6B6B6B; font-weight:600; margin-bottom:10px;">' + roleLabel + ' details</div>' +
+      '<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">' +
+        '<div><div style="font-size:11px; color:#6B6B6B;">Role</div><div style="font-weight:600; color:#000;">' + user.role + '</div></div>' +
+        '<div><div style="font-size:11px; color:#6B6B6B;">City</div><div style="font-weight:600; color:#000;">' + (user.city || 'â€”') + '</div></div>' +
+        '<div><div style="font-size:11px; color:#6B6B6B;">Type / Category</div><div style="font-weight:600; color:#000;">' + (user.type || 'â€”') + '</div></div>' +
+        '<div><div style="font-size:11px; color:#6B6B6B;">Signed up</div><div style="font-weight:600; color:#000;">' + (user.created_at ? new Date(user.created_at).toLocaleDateString('en-ZA') : 'â€”') + '</div></div>' +
+      '</div>' +
+    '</div>' +
+
+    '<p style="font-size:13px; color:#4A4A4A; margin:0 0 20px; line-height:1.5;">' +
+      'Approving this ' + user.role + ' will let them sign in and use their dashboard. ' +
+      'They already own their own ' + (user.role === 'vendor' ? 'store' : 'supplier') + ' record from signup.' +
+    '</p>' +
+
+    '<div id="review-error" style="color:#C4432B; font-size:13px; min-height:18px; margin-bottom:14px;"></div>' +
+
+    '<div style="display:flex; gap:10px;">' +
       '<button id="review-cancel" class="filter-btn" style="flex:1; padding:12px;">Cancel</button>' +
-      '<button id="review-approve" class="filter-btn active" style="flex:2; padding:12px; background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; display:none;">Approve + Assign</button>' +
+      '<button id="review-approve" class="filter-btn active" style="flex:2; padding:12px; background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff;">Approve</button>' +
     '</div>' +
   '</div>';
 
   document.body.appendChild(overlay);
   overlay.querySelector('#review-cancel').onclick = () => overlay.remove();
 
-  let options = [];
-  try {
-    if (user.role === 'vendor'){
-      options = await API.unassignedVendors();
-    } else {
-      options = await API.unassignedSuppliers();
-    }
-  } catch (err){
-    const body = overlay.querySelector('#review-body');
-    body.style.padding = '20px';
-    body.style.textAlign = 'left';
-    body.innerHTML = '<p style="color:#C4432B;">Could not load records: ' + err.message + '</p>';
-    return;
-  }
-
-  const body = overlay.querySelector('#review-body');
-  body.style.padding = '0';
-  body.style.textAlign = 'left';
-
-  if (options.length === 0){
-    body.innerHTML =
-      '<p style="padding:16px; background:#FEF3C7; border-radius:10px; color:#7A5610; font-size:13px; line-height:1.5;">' +
-        '⚠️ No unassigned ' + (user.role === 'vendor' ? 'vendor stores' : 'suppliers') + ' are available. ' +
-        'All records are already linked to other users.' +
-      '</p>';
-    return;
-  }
-
-  const selectHtml = user.role === 'vendor'
-    ? options.map(v =>
-        '<option value="' + v.id + '">' + v.id + ' · ' + v.city + ' · ' + v.type + '</option>'
-      ).join('')
-    : options.map(s =>
-        '<option value="' + s.id + '">' + s.id + ' · ' + s.name + ' · ' + s.city + '</option>'
-      ).join('');
-
-  body.innerHTML =
-    '<label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;">Assign ' + (user.role === 'vendor' ? 'vendor store' : 'supplier account') + '</label>' +
-    '<select id="review-select" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-size:14px;">' + selectHtml + '</select>' +
-    '<p style="font-size:12px; color:#6B6B6B; margin-top:8px;">This record will be linked to the user. If it is already linked to someone else, approval will fail.</p>';
-
-  const approveBtn = overlay.querySelector('#review-approve');
-  approveBtn.style.display = 'block';
-
-  approveBtn.onclick = async () => {
+  overlay.querySelector('#review-approve').onclick = async () => {
     const errorEl = overlay.querySelector('#review-error');
     errorEl.textContent = '';
-    const selected = overlay.querySelector('#review-select').value;
-    const assignment = user.role === 'vendor' ? { vendor_id: selected } : { supplier_id: selected };
-
-    approveBtn.disabled = true;
-    approveBtn.textContent = 'Approving…';
+    const btn = overlay.querySelector('#review-approve');
+    btn.disabled = true;
+    btn.textContent = 'Approvingâ€¦';
 
     try {
-      await API.approveUser(user.id, assignment);
+      await API.approveUser(user.id);
       overlay.remove();
       renderAdminPending();
     } catch (err){
-      errorEl.textContent = '❌ ' + err.message;
-      approveBtn.disabled = false;
-      approveBtn.textContent = 'Approve + Assign';
+      errorEl.textContent = 'âŒ ' + err.message;
+      btn.disabled = false;
+      btn.textContent = 'Approve';
     }
   };
 }

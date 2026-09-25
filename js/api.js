@@ -1,4 +1,4 @@
-// js/api.js — talks to backend
+﻿// js/api.js — talks to backend
 const API_BASE = 'http://localhost:3000/api';
 
 const API = {
@@ -44,13 +44,17 @@ const API = {
 
   // ---- Admin: pending users ----
   pendingUsers: () => API.request('/admin/users/pending'),
-  unassignedVendors: () => API.request('/admin/vendors/unassigned'),
-  unassignedSuppliers: () => API.request('/admin/suppliers/unassigned'),
   approveUser: (id, assignment) => API.request('/admin/users/' + id + '/approve', {
     method: 'POST',
     body: JSON.stringify(assignment || {})
   }),
   rejectUser: (id) => API.request('/admin/users/' + id, { method: 'DELETE' }),
+
+  // ---- ML live predict ----
+  predict: (data) => API.request('/predict', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
 
   // ---- Alerts ----
   alerts: () => API.request('/alerts'),
@@ -72,6 +76,18 @@ const API = {
   reorder: () => API.request('/reorder'),
   predictions: () => API.request('/predictions'),
   modelMetrics: () => API.request('/model-metrics'),
+
+  // ---- Vendor's own products ----
+  myProducts: () => API.request('/vendors/me/products'),
+  weather: (city) => API.request('/weather/' + encodeURIComponent(city)),
+  search: (q) => API.request('/search?q=' + encodeURIComponent(q)),
+  savePrediction: (data) => API.request('/vendors/me/predict', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  predictionHistory: (pid) => API.request('/vendors/me/predictions/' + pid),
+  mySupplierProducts: () => API.request('/suppliers/me/products'),
+  fullCatalog: () => API.request('/suppliers/me/catalog'),
 
   // ---- Products (vendor actions) ----
   updateProductPrice: (id, unit_price) => API.request('/products/' + id, {
@@ -139,3 +155,7 @@ const API = {
     method: 'DELETE'
   })
 };
+
+
+
+

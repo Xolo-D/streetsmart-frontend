@@ -1,4 +1,4 @@
-// js/login.js
+﻿// js/login.js
 
 /* ============================================================
    ROLE TABS
@@ -203,17 +203,17 @@ function renderSidebarUser(){
   if (session.role === 'supplier'){
     const supplier = DATA.suppliers.find(s => s.id === session.supplierId) || DATA.suppliers[0];
     displayName = supplier.name;
-    subLabel = supplier.id + ' · ' + supplier.city;
+    subLabel = supplier.id + ' Â· ' + supplier.city;
     initials = supplier.name.split(/\s+/).slice(0, 2).map(w => w[0].toUpperCase()).join('').slice(0, 2);
     avatarGradient = 'from-blue-500 to-cyan-500';
   } else if (session.role === 'vendor'){
-    const vendorId = session.vendorId || '—';
+    const vendorId = session.vendorId || 'â€”';
     const vendor = (typeof DATA !== 'undefined' && DATA.vendors)
       ? DATA.vendors.find(v => v.id === vendorId)
       : null;
-    displayName = vendor ? (vendor.id + ' · ' + vendor.city) : (session.user.name || 'New Vendor');
+    displayName = vendor ? (vendor.id + ' Â· ' + vendor.city) : (session.user.name || 'New Vendor');
     subLabel = session.user.email || 'vendor@streetsmart.co.za';
-    initials = vendorId === '—' ? 'NV' : vendorId.replace('V', '').slice(-2);
+    initials = vendorId === 'â€”' ? 'NV' : vendorId.replace('V', '').slice(-2);
     avatarGradient = 'from-cyan-500 to-blue-600';
   } else {
     displayName = session.user.name || 'System Administrator';
@@ -356,16 +356,16 @@ function bindSignupForm(){
     const btn = document.getElementById('signup-submit');
     const origText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = 'Creating…';
+    btn.textContent = 'Creatingâ€¦';
 
     try {
       await API.register(payload);
-      okEl.textContent = '✓ Account created! An administrator will approve it shortly. You can sign in once approved.';
+      okEl.textContent = 'âœ“ Account created! An administrator will approve it shortly. You can sign in once approved.';
       okEl.classList.remove('hidden');
       signupForm.reset();
       setRoleButton('vendor');
     } catch (err){
-      errEl.textContent = '❌ ' + err.message;
+      errEl.textContent = 'âŒ ' + err.message;
     } finally {
       btn.disabled = false;
       btn.textContent = origText;
@@ -425,10 +425,10 @@ function bindForgotForm(){
       document.getElementById('forgot-code-display').textContent = res.code || '------';
       document.getElementById('forgot-step-1').classList.add('hidden');
       document.getElementById('forgot-step-2').classList.remove('hidden');
-      okEl.textContent = '✓ Code generated. See the demo code above.';
+      okEl.textContent = 'âœ“ Code generated. See the demo code above.';
       okEl.classList.remove('hidden');
     } catch (err){
-      errEl.textContent = '❌ ' + err.message;
+      errEl.textContent = 'âŒ ' + err.message;
     }
   };
 
@@ -446,13 +446,13 @@ function bindForgotForm(){
 
     try {
       await API.resetPassword(email, code, newPassword);
-      okEl.textContent = '✓ Password updated! Redirecting to sign in…';
+      okEl.textContent = 'âœ“ Password updated! Redirecting to sign inâ€¦';
       okEl.classList.remove('hidden');
       setTimeout(() => {
         document.getElementById('forgot-back').click();
       }, 1500);
     } catch (err){
-      errEl.textContent = '❌ ' + err.message;
+      errEl.textContent = 'âŒ ' + err.message;
     }
   };
 }
@@ -487,7 +487,7 @@ async function handleLogin(){
   const originalHTML = btn ? btn.innerHTML : '';
   if (btn){
     btn.disabled = true;
-    btn.innerHTML = '<svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg><span>Verifying…</span>';
+    btn.innerHTML = '<svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg><span>Verifyingâ€¦</span>';
   }
 
   try {
@@ -506,7 +506,7 @@ async function handleLogin(){
     showTab(ROLE_TABS[user.role][0].id);
     isLoggingIn = false;
   } catch (err){
-    errorEl.textContent = '❌ ' + (err.message || 'Login failed');
+    errorEl.textContent = 'âŒ ' + (err.message || 'Login failed');
     if (btn){
       btn.innerHTML = originalHTML;
       btn.disabled = false;
@@ -556,13 +556,13 @@ function renderSessionBar(){
   if (session.role === 'admin'){
     const topVendors = (DATA.vendors || []).slice(0, 30);
     extra = '<select id="vendor-switch" class="text-xs px-3 py-2 bg-slate-900 border border-slate-700 text-slate-200 rounded-lg cursor-pointer font-semibold">' +
-      '<option value="">— Preview a vendor —</option>' +
-      topVendors.map(v => '<option value="' + v.id + '"' + (v.id===session.vendorId?' selected':'') + '>' + v.id + ' · ' + v.city + '</option>').join('') +
+      '<option value="">â€” Preview a vendor â€”</option>' +
+      topVendors.map(v => '<option value="' + v.id + '"' + (v.id===session.vendorId?' selected':'') + '>' + v.id + ' Â· ' + v.city + '</option>').join('') +
       '</select>';
   }
 
   sessionBar.innerHTML =
-    '<span class="text-xs font-semibold px-3 py-2 rounded-lg" style="background:rgba(30,78,140,0.15); color:#2E6FBF; border:1px solid rgba(30,78,140,0.25);">Signed in — ' + labels[session.role] + '</span>' +
+    '<span class="text-xs font-semibold px-3 py-2 rounded-lg" style="background:rgba(30,78,140,0.15); color:#2E6FBF; border:1px solid rgba(30,78,140,0.25);">Signed in â€” ' + labels[session.role] + '</span>' +
     extra +
     '<button id="logout-btn" type="button" class="text-xs font-semibold px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg transition-all">Sign out</button>';
 
@@ -600,4 +600,109 @@ function renderSessionBar(){
    INIT
    ============================================================ */
 
+/* ============================================================
+   GLOBAL SEARCH
+   ============================================================ */
+
+let searchTimer = null;
+
+function initGlobalSearch(){
+  const input = document.getElementById('global-search-input');
+  const results = document.getElementById('global-search-results');
+  if (!input || !results) return;
+
+  function hideResults(){ results.style.display = 'none'; }
+
+  function renderResults(data){
+    if (!data.products.length && !data.suppliers.length){
+      results.innerHTML = '<div style="padding:20px; text-align:center; color:#6B6B6B; font-size:13px;">No matches found</div>';
+      results.style.display = 'block';
+      return;
+    }
+
+    let html = '';
+
+    if (data.products.length){
+      html += '<div style="padding:10px 14px; font-size:10.5px; font-weight:700; color:#6B6B6B; text-transform:uppercase; letter-spacing:0.08em; border-bottom:1px solid rgba(0,0,0,0.06);">Products</div>';
+      html += data.products.map(p =>
+        '<div class="search-result-row" data-type="product" data-id="' + p.id + '" style="padding:10px 14px; cursor:pointer; border-bottom:1px solid rgba(0,0,0,0.04); display:flex; justify-content:space-between; align-items:center;">' +
+          '<div>' +
+            '<div style="font-weight:600; color:#000; font-size:13.5px;">' + p.name + '</div>' +
+            '<div style="font-size:11px; color:#6B6B6B; margin-top:2px;">' + p.category + ' · ' + p.id + '</div>' +
+          '</div>' +
+          '<div style="font-weight:600; color:#1E4E8C; font-size:13px;">' + fmtR(p.unit_price) + '</div>' +
+        '</div>'
+      ).join('');
+    }
+
+    if (data.suppliers.length){
+      html += '<div style="padding:10px 14px; font-size:10.5px; font-weight:700; color:#6B6B6B; text-transform:uppercase; letter-spacing:0.08em; border-bottom:1px solid rgba(0,0,0,0.06); margin-top:4px;">Suppliers</div>';
+      html += data.suppliers.map(s =>
+        '<div class="search-result-row" data-type="supplier" data-id="' + s.id + '" style="padding:10px 14px; cursor:pointer; border-bottom:1px solid rgba(0,0,0,0.04); display:flex; justify-content:space-between; align-items:center;">' +
+          '<div>' +
+            '<div style="font-weight:600; color:#000; font-size:13.5px;">' + s.name + '</div>' +
+            '<div style="font-size:11px; color:#6B6B6B; margin-top:2px;">' + s.city + ' · ' + s.category + '</div>' +
+          '</div>' +
+          '<div style="font-weight:600; color:#D89A2E; font-size:12px;">★ ' + s.rating.toFixed(1) + '</div>' +
+        '</div>'
+      ).join('');
+    }
+
+    results.innerHTML = html;
+    results.style.display = 'block';
+
+    results.querySelectorAll('.search-result-row').forEach(row => {
+      row.onmouseenter = () => row.style.background = '#F1EAD5';
+      row.onmouseleave = () => row.style.background = 'transparent';
+      row.onclick = () => {
+        const type = row.dataset.type;
+        if (type === 'product'){
+          if (session.role === 'vendor') showTab('predictions');
+          else if (session.role === 'supplier') showTab('sup-products');
+          else showTab('adm-data');
+        } else if (type === 'supplier'){
+          if (session.role === 'vendor') showTab('suppliers');
+          else if (session.role === 'supplier') showTab('sup-overview');
+          else showTab('adm-suppliers');
+        }
+        hideResults();
+        input.value = '';
+      };
+    });
+  }
+
+  input.oninput = () => {
+    const q = input.value.trim();
+    clearTimeout(searchTimer);
+    if (q.length < 2){ hideResults(); return; }
+    searchTimer = setTimeout(async () => {
+      try {
+        const data = await API.search(q);
+        renderResults(data);
+      } catch (e){
+        console.error('Search failed', e);
+      }
+    }, 250);
+  };
+
+  input.onfocus = () => {
+    if (input.value.trim().length >= 2 && results.innerHTML) results.style.display = 'block';
+  };
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#global-search-input') && !e.target.closest('#global-search-results')){
+      hideResults();
+    }
+  });
+
+  input.onkeydown = (e) => {
+    if (e.key === 'Escape'){ hideResults(); input.blur(); }
+  };
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+
 showLoginScreen();
+initGlobalSearch();

@@ -1,5 +1,5 @@
-/* ============================================================
-   StreetSmart — Cream White + Blue Theme
+﻿/* ============================================================
+   StreetSmart â€” Cream White + Blue Theme
    Login: photo left / cream right
    Dashboard: template background + UNIZULU watermark
    ============================================================ */
@@ -55,7 +55,7 @@ body{
 a{color:inherit;}
 
 /* ============================================================
-   LOGIN PAGE — Left: photo overlay | Right: cream white
+   LOGIN PAGE â€” Left: photo overlay | Right: cream white
    ============================================================ */
 #login-screen{
   background: #FBF8EF !important;
@@ -205,7 +205,7 @@ a{color:inherit;}
 }
 
 /* ============================================================
-   MAIN CONTENT — template bg + UNIZULU watermark
+   MAIN CONTENT â€” template bg + UNIZULU watermark
    ============================================================ */
 #app-shell main,
 main#views{
@@ -724,4 +724,93 @@ body > div[style*="position:fixed"] .filter-btn:not(.active){
   cursor: pointer;
   font-family: 'Inter', sans-serif;
   font-size: 13px;
+}
+/* ============================================================
+   MODAL STYLES — blue panels with white text
+   ============================================================ */
+
+/* Darker backdrop */
+div[style*="position:fixed"][style*="inset:0"]{
+  background: rgba(0,0,0,0.75) !important;
+  z-index: 9999 !important;
+}
+
+/* Blue modal panel */
+div[style*="position:fixed"][style*="inset:0"] > div{
+  background: linear-gradient(135deg, #1E4E8C 0%, #2E6FBF 100%) !important;
+  background-color: #1E4E8C !important;
+  color: #FFFFFF !important;
+  border-radius: 20px !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important;
+  opacity: 1 !important;
+  position: relative !important;
+  z-index: 10000 !important;
+}
+
+/* Headings in white */
+div[style*="position:fixed"][style*="inset:0"] h1,
+div[style*="position:fixed"][style*="inset:0"] h2,
+div[style*="position:fixed"][style*="inset:0"] h3,
+div[style*="position:fixed"][style*="inset:0"] h4{
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+/* Labels light blue */
+div[style*="position:fixed"][style*="inset:0"] label{
+  color: #DCE6F2 !important;
+  font-weight: 600 !important;
+}
+
+/* Other text */
+div[style*="position:fixed"][style*="inset:0"] p,
+div[style*="position:fixed"][style*="inset:0"] strong,
+div[style*="position:fixed"][style*="inset:0"] b{
+  color: #FFFFFF !important;
+}
+
+div[style*="position:fixed"][style*="inset:0"] span{
+  color: #FFFFFF !important;
+}
+
+/* Inputs white with blue text */
+div[style*="position:fixed"][style*="inset:0"] input,
+div[style*="position:fixed"][style*="inset:0"] select,
+div[style*="position:fixed"][style*="inset:0"] textarea{
+  background: #FFFFFF !important;
+  color: #1E4E8C !important;
+  border: 1px solid rgba(255,255,255,0.35) !important;
+  font-weight: 600 !important;
+}
+div[style*="position:fixed"][style*="inset:0"] input::placeholder{
+  color: rgba(30,78,140,0.5) !important;
+}
+div[style*="position:fixed"][style*="inset:0"] option{
+  color: #1E4E8C !important;
+  background: #FFFFFF !important;
+}
+
+/* Buttons */
+div[style*="position:fixed"][style*="inset:0"] .filter-btn.active{
+  background: #FFFFFF !important;
+  color: #1E4E8C !important;
+  border: none !important;
+  font-weight: 700 !important;
+}
+div[style*="position:fixed"][style*="inset:0"] .filter-btn:not(.active){
+  background: rgba(255,255,255,0.15) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255,255,255,0.4) !important;
+}
+
+/* Info blocks inside modals (hints, conditions, results) — semi-transparent white */
+div[style*="position:fixed"][style*="inset:0"] > div > div[style*="background:#DCE6F2"],
+div[style*="position:fixed"][style*="inset:0"] > div > div[style*="background:#F5F0E1"],
+div[style*="position:fixed"][style*="inset:0"] > div > div[style*="background:#fff"]{
+  background: rgba(255,255,255,0.15) !important;
+  color: #FFFFFF !important;
+}
+div[style*="position:fixed"][style*="inset:0"] > div > div[style*="background:#DCE6F2"] *,
+div[style*="position:fixed"][style*="inset:0"] > div > div[style*="background:#F5F0E1"] *{
+  color: #FFFFFF !important;
 }

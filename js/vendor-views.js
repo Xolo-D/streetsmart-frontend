@@ -1,482 +1,598 @@
-// js/vendor-views.js
+﻿// js/vendor-views.js
 
-/* ==================== OVERVIEW ==================== */
+function marketAvgForCategory(category){
+  const items = (DATA.reorder_all || []).filter(p => p.category === category);
+  if (items.length === 0) return 0;
+  return items.reduce((s, p) => s + (p.unit_price || 0), 0) / items.length;
+}
+function priceAdvice(price, category){
+  const avg = marketAvgForCategory(category);
+  if (!avg || !price) return { avg: 0, label: '-', color: '#6B6B6B' };
+  const r = price / avg;
+  if (r < 0.85) return { avg, label: 'Below market - could raise', color: '#1E4E8C' };
+  if (r > 1.15) return { avg, label: Math.round((r-1)*100) + '% above market', color: '#C4432B' };
+  return { avg, label: 'Fair', color: '#4C6B3F' };
+}
+function suggestedPriceFromCost(cost){ return Math.round(cost * 1.4 * 100) / 100; }
 
-function renderOverview(){
+/* OVERVIEW */
+async function renderOverview(){
   const el = document.getElementById('view-overview');
-  const k = DATA.kpis;
+  el.innerHTML = '<div class="panel"><p class="sub">Loading your store…</p></div>';
 
-  // Find the logged-in vendor's own record
-  const myVendor = (typeof session !== 'undefined' && session.vendorId)
-    ? (DATA.vendors || []).find(x => x.id === session.vendorId)
-    : null;
+  let vendor = null, stats = null;
+  try { vendor = await API.request('/vendors/me'); } catch (e){}
+  try { stats = await API.request('/vendors/me/stats'); } catch (e){}
 
-  // Async alert check
-  setTimeout(async () => {
-    try {
-      const alerts = await API.alerts();
-      if (alerts.count > 0){
-        const banner = document.getElementById('alert-banner');
-        if (banner){
-          banner.style.display = 'flex';
-          banner.innerHTML =
-            '<div class="alert-icon">⚠️</div>' +
-            '<div class="alert-body">' +
-              '<div class="alert-title">' + alerts.count + ' product' + (alerts.count > 1 ? 's' : '') + ' need attention</div>' +
-              '<div class="alert-sub">' + alerts.critical + ' critical · ' + alerts.urgent + ' urgent · ' + alerts.warning + ' warning</div>' +
-            '</div>' +
-            '<button class="alert-action" onclick="showTab(\'inventory\')">View →</button>';
-        }
-      }
-    } catch (e){}
-  }, 100);
+  const revenue = (stats && stats.revenue) || 0;
+  const profit = (stats && stats.profit) || 0;
+  const units = (stats && stats.units) || 0;
+  const transactions = (stats && stats.transactions) || 0;
+  const skus = (stats && stats.skus_sold) || 0;
 
-  // Vendor banner
-  const vendorBannerHtml = myVendor
-    ? '<div id="my-vendor-banner" style="background:linear-gradient(135deg,#FFE4DB,#FFF); border:1px solid rgba(196,67,43,0.25); border-radius:14px; padding:16px 20px; margin-bottom:14px;">' +
-        '<div style="font-weight:700; color:#000; font-size:15px;">Your store: ' + myVendor.id + ' · ' + myVendor.city + '</div>' +
-        '<div style="font-size:12.5px; color:#4A4A4A; margin-top:4px;">' +
-          'Revenue: <strong>' + fmtR(myVendor.revenue) + '</strong> · ' +
-          'Profit: <strong>' + fmtR(myVendor.profit) + '</strong> · ' +
-          'Units sold: <strong>' + fmtNum(myVendor.units) + '</strong> · ' +
-          'Transactions: <strong>' + fmtNum(myVendor.transactions) + '</strong> · ' +
-          'SKUs sold: <strong>' + fmtNum(myVendor.products) + '</strong>' +
-        '</div>' +
-      '</div>'
-    : '';
+  const banner = vendor ? '<div style="background:linear-gradient(135deg,#DCE6F2,#FFF); border:1px solid rgba(30,78,140,0.25); border-radius:14px; padding:16px 20px; margin-bottom:14px;"><div style="font-weight:700; color:#000; font-size:15px;">Your store: ' + vendor.id + ' · ' + vendor.city + ' · ' + vendor.type + '</div></div>' : '';
 
-  el.innerHTML = vendorBannerHtml
-    + '<div id="alert-banner" class="alert-banner" style="display:none;"></div>'
-    + '<div class="hero"><div class="hero-figure"><div class="label">Network revenue, ' + k.date_start + ' — ' + k.date_end + '</div><div class="num display"><span class="unit">R</span>' + (k.total_revenue/1000000).toFixed(2) + '<span class="unit" style="font-size:32px;color:var(--ink);margin-left:4px;">M</span></div></div><div class="hero-sub">Across ' + fmtNum(k.total_transactions) + ' transactions, ' + k.num_vendors + ' vendors carrying ' + k.num_products + ' products in ' + k.num_categories + ' categories, ' + k.num_cities + ' cities.</div></div>'
-    + '<div class="kpi-row"><div class="kpi"><div class="v">' + fmtR(k.total_profit) + '</div><div class="l">Network profit</div></div><div class="kpi"><div class="v">' + k.avg_margin + '%</div><div class="l">Average margin</div></div><div class="kpi"><div class="v">' + fmtNum(k.total_units) + '</div><div class="l">Units sold</div></div><div class="kpi"><div class="v">' + k.num_vendors + '</div><div class="l">Active vendors</div></div><div class="kpi"><div class="v">' + k.num_products + '</div><div class="l">Products tracked</div></div></div>'
-    + '<div class="grid grid-2" style="margin-top:24px;"><div class="panel"><h2>Revenue &amp; profit by month</h2><p class="sub">Monthly totals across the trading year.</p><div class="chart-wrap" style="height:300px;"><canvas id="chart-monthly"></canvas></div></div><div class="panel"><h2>Revenue by category</h2><p class="sub">Where the money moves across the product range.</p><div class="chart-wrap" style="height:300px;"><canvas id="chart-category"></canvas></div></div></div>'
-    + '<div class="panel"><h2>Top 10 products by revenue</h2><p class="sub">Best sellers across the full vendor network.</p><table><thead><tr><th>Product</th><th>Category</th><th class="num">Units sold</th><th class="num">Revenue</th><th class="num">Profit</th></tr></thead><tbody>'
-    + DATA.top_products.map(p => '<tr><td class="name-cell">' + p.name + '</td><td><span class="swatch" style="background:' + CAT_HEX[p.category] + '"></span> ' + p.category + '</td><td class="num">' + fmtNum(p.units) + '</td><td class="num">' + fmtR(p.revenue) + '</td><td class="num">' + fmtR(p.profit) + '</td></tr>').join('')
-    + '</tbody></table></div>'
-    + '<div class="filter-row" style="margin-top:22px;">'
-    +   '<button id="export-overview-pdf" class="filter-btn active" style="background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;border:none;font-weight:700;padding:10px 20px;">📄 Download my PDF report</button>'
-    +   '<button id="export-overview-csv" class="filter-btn" style="padding:10px 20px;">📥 Export my CSV</button>'
-    + '</div>';
+  el.innerHTML = banner +
+    '<div class="hero"><div class="hero-figure"><div class="label">Your store revenue</div><div class="num display"><span class="unit">R</span>' + (revenue/1000).toFixed(1) + '<span class="unit" style="font-size:32px;color:var(--ink);margin-left:4px;">K</span></div></div></div>' +
+    '<div class="kpi-row">' +
+      '<div class="kpi"><div class="v">' + fmtR(profit) + '</div><div class="l">Your profit</div></div>' +
+      '<div class="kpi"><div class="v">' + fmtNum(units) + '</div><div class="l">Units sold</div></div>' +
+      '<div class="kpi"><div class="v">' + fmtNum(transactions) + '</div><div class="l">Transactions</div></div>' +
+      '<div class="kpi"><div class="v">' + fmtNum(skus) + '</div><div class="l">Products tracked</div></div>' +
+    '</div>' +
+    '<div class="panel" style="margin-top:24px;"><h2>Quick actions</h2><p class="sub">What you can do.</p><div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-top:18px;">' +
+      '<button class="filter-btn" onclick="showTab(\'predictions\')" style="padding:20px; text-align:left; background:#F5F0E1; border-radius:12px; cursor:pointer;"><div style="font-size:24px;">📦</div><div style="font-weight:700; color:#000;">What to stock</div></button>' +
+      '<button class="filter-btn" onclick="showTab(\'inventory\')" style="padding:20px; text-align:left; background:#F5F0E1; border-radius:12px; cursor:pointer;"><div style="font-size:24px;">💰</div><div style="font-weight:700; color:#000;">Record sales</div></button>' +
+      '<button class="filter-btn" onclick="showTab(\'inventory\')" style="padding:20px; text-align:left; background:#F5F0E1; border-radius:12px; cursor:pointer;"><div style="font-size:24px;">📈</div><div style="font-weight:700; color:#000;">Update stock</div></button>' +
+      '<button class="filter-btn" onclick="showTab(\'suppliers\')" style="padding:20px; text-align:left; background:#F5F0E1; border-radius:12px; cursor:pointer;"><div style="font-size:24px;">🏪</div><div style="font-weight:700; color:#000;">Suppliers</div></button>' +
+    '</div></div>' +
+    '<div class="filter-row" style="margin-top:22px;">' +
+      '<button id="export-vendor-pdf" class="filter-btn active" style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF);color:#fff;border:none;font-weight:700;padding:10px 20px;">📄 Download PDF report</button>' +
+      '<button id="export-vendor-csv" class="filter-btn" style="padding:10px 20px;">📥 Export CSV</button>' +
+    '</div>';
 
-  new Chart(document.getElementById('chart-monthly'), {type:'line',data:{labels:DATA.monthly.map(m=>m.month),datasets:[{label:'Revenue',data:DATA.monthly.map(m=>m.revenue),borderColor:VERM,backgroundColor:'rgba(196,67,43,0.15)',fill:true,tension:0.25,pointRadius:3,borderWidth:2.5},{label:'Profit',data:DATA.monthly.map(m=>m.profit),borderColor:INDIGO,backgroundColor:'transparent',tension:0.25,pointRadius:3,borderWidth:2,borderDash:[4,3]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',align:'end',labels:{boxWidth:12,usePointStyle:true}}},scales:{y:{grid:{color:LINE},ticks:{callback:v=>fmtR(v)}},x:{grid:{display:false}}}}});
-  new Chart(document.getElementById('chart-category'), {type:'bar',data:{labels:DATA.categories.map(c=>c.category),datasets:[{data:DATA.categories.map(c=>c.revenue),backgroundColor:DATA.categories.map(c=>CAT_HEX[c.category]),borderColor:INK,borderWidth:1}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:LINE},ticks:{callback:v=>fmtR(v)}},y:{grid:{display:false}}}}});
+  const pdfBtn = document.getElementById('export-vendor-pdf');
+  if (pdfBtn) pdfBtn.onclick = () => {
+    const cols = ['Item', 'Value'];
+    const rows = [
+      ['Store ID', vendor ? vendor.id : '—'],
+      ['City', vendor ? vendor.city : '—'],
+      ['Type', vendor ? vendor.type : '—'],
+      ['Revenue', fmtR(revenue)],
+      ['Profit (est.)', fmtR(profit)],
+      ['Units sold', fmtNum(units)],
+      ['Transactions', fmtNum(transactions)],
+      ['Products tracked', fmtNum(skus)],
+      ['Generated', new Date().toLocaleString()]
+    ];
+    exportPDF('Vendor Report — ' + (vendor ? vendor.id : 'Store'), 'Store activity summary', cols, rows, 'vendor-report-' + new Date().toISOString().slice(0,10) + '.pdf');
+  };
 
-  // Vendor-scoped exports
-  setTimeout(() => {
-    const pdfBtn = document.getElementById('export-overview-pdf');
-    if (pdfBtn) pdfBtn.onclick = () => {
-      const v = myVendor || {};
-      const vName = v.id ? (v.id + ' · ' + v.city) : 'Vendor';
-      const columns = ['Item', 'Value'];
-      const rows = [
-        ['Vendor ID', v.id || session.vendorId || '—'],
-        ['City', v.city || '—'],
-        ['Type', v.type || '—'],
-        ['Total revenue', fmtR(v.revenue || 0)],
-        ['Total profit', fmtR(v.profit || 0)],
-        ['Units sold', fmtNum(v.units || 0)],
-        ['Transactions', fmtNum(v.transactions || 0)],
-        ['SKUs sold', fmtNum(v.products || 0)],
-        ['Report generated', new Date().toLocaleString()]
-      ];
-      exportPDF(
-        'Sales Report — ' + vName,
-        'Vendor-specific report · ' + (v.city || ''),
-        columns,
-        rows,
-        'vendor-' + (v.id || session.vendorId || 'report') + '-' + new Date().toISOString().slice(0,10) + '.pdf'
-      );
-    };
-    const csvBtn = document.getElementById('export-overview-csv');
-    if (csvBtn) csvBtn.onclick = () => {
-      const v = myVendor || {};
-      const rows = [{
-        'Vendor ID': v.id || session.vendorId || '—',
-        'City': v.city || '—',
-        'Type': v.type || '—',
-        'Revenue (R)': v.revenue || 0,
-        'Profit (R)': v.profit || 0,
-        'Units sold': v.units || 0,
-        'Transactions': v.transactions || 0,
-        'SKUs sold': v.products || 0
-      }];
-      exportCSV('vendor-' + (v.id || session.vendorId || 'report') + '-' + new Date().toISOString().slice(0,10) + '.csv', rows);
-    };
-  }, 100);
+  const csvBtn = document.getElementById('export-vendor-csv');
+  if (csvBtn) csvBtn.onclick = () => {
+    const rows = [{
+      'Store ID': vendor ? vendor.id : '',
+      'City': vendor ? vendor.city : '',
+      'Type': vendor ? vendor.type : '',
+      'Revenue (R)': revenue,
+      'Profit (R)': profit,
+      'Units sold': units,
+      'Transactions': transactions,
+      'Products tracked': skus
+    }];
+    exportCSV('vendor-report-' + new Date().toISOString().slice(0,10) + '.csv', rows);
+  };
 }
 
-/* ==================== SALES ==================== */
-
-function renderSales(){
+/* SALES */
+async function renderSales(){
   const el = document.getElementById('view-sales');
-  el.innerHTML = '<div class="grid grid-2"><div class="panel"><h2>Revenue by city</h2><p class="sub">Where the network trade is concentrated.</p><div class="chart-wrap" style="height:320px;"><canvas id="chart-city"></canvas></div></div><div class="panel"><h2>Revenue by vendor type</h2><p class="sub">Food stalls carry the network, but accessories and snacks add margin.</p><div class="chart-wrap" style="height:320px;"><canvas id="chart-vendortype"></canvas></div></div></div>'
-    + '<div class="grid grid-3"><div class="panel"><h2>Demand level mix</h2><p class="sub">Share of transactions by recorded demand.</p><div class="chart-wrap" style="height:220px;"><canvas id="chart-demand"></canvas></div></div><div class="panel"><h2>Weather effect</h2><p class="sub">Average units sold per transaction, by weather.</p><div class="chart-wrap" style="height:220px;"><canvas id="chart-weather"></canvas></div></div><div class="panel"><h2>Weekday vs weekend</h2><p class="sub">Average units sold per transaction.</p><div class="chart-wrap" style="height:220px;"><canvas id="chart-weekend"></canvas></div></div></div>';
-  new Chart(document.getElementById('chart-city'),{type:'bar',data:{labels:DATA.cities.map(c=>c.city),datasets:[{data:DATA.cities.map(c=>c.revenue),backgroundColor:INDIGO,borderColor:INK,borderWidth:1}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:LINE},ticks:{callback:v=>fmtR(v)}},y:{grid:{display:false}}}}});
-  new Chart(document.getElementById('chart-vendortype'),{type:'bar',data:{labels:DATA.vendor_types.map(c=>c.type),datasets:[{data:DATA.vendor_types.map(c=>c.revenue),backgroundColor:MARIGOLD,borderColor:INK,borderWidth:1}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:LINE},ticks:{callback:v=>fmtR(v)}},y:{grid:{display:false}}}}});
-  const dc={High:VERM,Medium:MARIGOLD,Low:GREEN};
-  new Chart(document.getElementById('chart-demand'),{type:'doughnut',data:{labels:DATA.demand_levels.map(d=>d.level),datasets:[{data:DATA.demand_levels.map(d=>d.count),backgroundColor:DATA.demand_levels.map(d=>dc[d.level]),borderColor:'#FBF8EF',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:10,color:'#4A4A4A'}}}}});
-  new Chart(document.getElementById('chart-weather'),{type:'bar',data:{labels:DATA.weather.map(w=>w.weather),datasets:[{data:DATA.weather.map(w=>w.avg_qty),backgroundColor:GREEN,borderColor:INK,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:LINE}},x:{grid:{display:false}}}}});
-  const wk=DATA.weekend.map(w=>w.Is_Weekend==='Yes'?'Weekend':'Weekday');
-  new Chart(document.getElementById('chart-weekend'),{type:'bar',data:{labels:wk,datasets:[{data:DATA.weekend.map(w=>w.avg_qty),backgroundColor:[VERM,INDIGO],borderColor:INK,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:LINE}},x:{grid:{display:false}}}}});
-}
+  el.innerHTML = '<div class="panel"><p class="sub">Loading your sales…</p></div>';
 
-/* ==================== WHAT TO STOCK ==================== */
-
-async function renderPredictions(){
-  const el = document.getElementById('view-predictions');
-  el.innerHTML = '<div class="panel"><p class="sub">Checking what you need…</p></div>';
-
-  let predictions = [];
-  let discounts = [];
-
+  let sales = [];
+  let trend = null;
   try {
-    predictions = await API.predictions();
-    discounts = await API.discounts();
+    sales = await API.salesLog();
+    trend = await API.request('/vendors/me/sales-trend?days=30');
   } catch (err){
-    el.innerHTML = '<div class="panel"><h2>Unable to load suggestions</h2><p class="sub">Please try again later.</p></div>';
+    el.innerHTML = '<div class="panel"><h2>Could not load sales</h2><p class="sub" style="color:var(--danger);">' + err.message + '</p></div>';
     return;
   }
 
-  predictions.sort((a,b) => b.predicted_daily_demand - a.predicted_daily_demand);
+  const hasSales = sales && sales.length > 0;
 
-  const urgent = [];
-  predictions.forEach(p => {
-    const days = p.current_stock / p.predicted_daily_demand;
-    if (days < 3) urgent.push(p);
+  // KPI block
+  const totalRevenue = hasSales ? sales.reduce((s, r) => s + (r.total_amount || 0), 0) : 0;
+  const totalUnits = hasSales ? sales.reduce((s, r) => s + (r.quantity || 0), 0) : 0;
+
+  el.innerHTML =
+    '<div class="filter-row" style="margin-bottom:22px;">' +
+      '<button class="filter-btn active trend-btn" data-days="7">Last 7 days</button>' +
+      '<button class="filter-btn trend-btn" data-days="30">Last 30 days</button>' +
+      '<button class="filter-btn trend-btn" data-days="365">Last 365 days</button>' +
+    '</div>' +
+
+    '<div class="stat-strip" style="margin-bottom:24px;">' +
+      '<div class="cell"><div class="v">' + fmtNum(sales.length) + '</div><div class="l">sales recorded</div></div>' +
+      '<div class="cell"><div class="v">' + fmtNum(totalUnits) + '</div><div class="l">units sold</div></div>' +
+      '<div class="cell"><div class="v">' + fmtR(totalRevenue) + '</div><div class="l">total revenue</div></div>' +
+      '<div class="cell"><div class="v" id="trend-total">' + fmtR(trend ? trend.total_revenue : 0) + '</div><div class="l" id="trend-label">last 30 days</div></div>' +
+    '</div>' +
+
+    '<div class="panel">' +
+      '<h2>Sales trend</h2>' +
+      '<p class="sub">Revenue and units sold over time.</p>' +
+      '<div class="chart-wrap" style="height:320px;"><canvas id="vendor-sales-trend"></canvas></div>' +
+    '</div>' +
+
+    (hasSales
+      ? '<div class="panel"><h2>Sales history</h2><p class="sub">Your recent sales, newest first.</p><div class="table-scroll" style="max-height:400px;"><table><thead><tr><th>When</th><th>Product</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Total</th></tr></thead><tbody>' +
+        sales.map(s => '<tr><td>' + new Date(s.sold_at).toLocaleString('en-ZA') + '</td><td class="name-cell">' + (s.product_name || s.product_id) + '</td><td class="num">' + s.quantity + '</td><td class="num">' + fmtR(s.unit_price) + '</td><td class="num">' + fmtR(s.total_amount) + '</td></tr>').join('') +
+        '</tbody></table></div></div>'
+      : '<div class="panel"><h2>Sales history</h2><p class="sub">Sales you have recorded appear here.</p><div style="text-align:center; padding:50px 20px;"><div style="font-size:56px;">📊</div><div style="font-weight:700; font-size:18px; margin-top:14px;">No sales recorded yet</div><div style="color:var(--muted); font-size:14px; margin-top:8px;">Go to <strong>Inventory &amp; reorder</strong> and click "Record a sale" to get started.</div></div></div>'
+    );
+
+  // Chart renderer
+  function renderTrendChart(trendData, label){
+    const canvas = document.getElementById('vendor-sales-trend');
+    if (!canvas) return;
+
+    // Destroy previous chart if exists
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+
+    const data = trendData.data || [];
+    new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: data.map(d => d.label),
+        datasets: [
+          {
+            label: 'Revenue',
+            data: data.map(d => d.revenue),
+            borderColor: '#1E4E8C',
+            backgroundColor: 'rgba(30,78,140,0.15)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: data.length > 60 ? 0 : 3,
+            borderWidth: 2.5,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Units sold',
+            data: data.map(d => d.units),
+            borderColor: '#4C6B3F',
+            backgroundColor: 'transparent',
+            tension: 0.3,
+            pointRadius: data.length > 60 ? 0 : 3,
+            borderWidth: 2,
+            borderDash: [4, 3],
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top', align: 'end', labels: { boxWidth: 12, usePointStyle: true } },
+          tooltip: {
+            callbacks: {
+              label: function(ctx){
+                if (ctx.dataset.label === 'Revenue') return 'Revenue: ' + fmtR(ctx.parsed.y);
+                return 'Units: ' + fmtNum(ctx.parsed.y);
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+          y: {
+            position: 'left',
+            grid: { color: 'rgba(0,0,0,0.08)' },
+            ticks: { callback: v => fmtR(v) }
+          },
+          y1: {
+            position: 'right',
+            grid: { display: false },
+            ticks: { callback: v => fmtNum(v) }
+          }
+        }
+      }
+    });
+  }
+
+  // Initial render
+  if (trend) renderTrendChart(trend, 'last 30 days');
+
+  // Wire trend buttons
+  el.querySelectorAll('.trend-btn').forEach(btn => {
+    btn.onclick = async () => {
+      el.querySelectorAll('.trend-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const days = btn.dataset.days;
+      const labelEl = document.getElementById('trend-label');
+      const totalEl = document.getElementById('trend-total');
+      if (labelEl) labelEl.textContent = 'last ' + days + ' days';
+      try {
+        const t = await API.request('/vendors/me/sales-trend?days=' + days);
+        if (totalEl) totalEl.textContent = fmtR(t.total_revenue);
+        renderTrendChart(t, 'last ' + days + ' days');
+      } catch (e){
+        alert('Could not load trend: ' + e.message);
+      }
+    };
   });
+}
 
+/* WHAT TO STOCK */
+async function renderPredictions(){
+  const el = document.getElementById('view-predictions');
+  el.innerHTML = '<div class="panel"><p class="sub">Loading…</p></div>';
+
+  let products = [];
+  let discounts = [];
+  try {
+    products = await API.myProducts();
+  } catch (e){
+    el.innerHTML = '<div class="panel"><h2>Could not load products</h2></div>';
+    return;
+  }
+  try {
+    discounts = await API.discounts();
+  } catch (e){
+    discounts = [];
+  }
+
+  if (!products || products.length === 0){
+    el.innerHTML = '<div class="panel"><h2>No products yet</h2></div>';
+    return;
+  }
+
+  products.sort((a, b) => (b.predicted_daily_demand || 0) - (a.predicted_daily_demand || 0));
+
+  // Discount lookup
   const discountMap = {};
   discounts.forEach(d => { discountMap[d.product_id] = d; });
 
-  const discountedProducts = predictions.filter(p => discountMap[p.product_id]);
-  const discountSectionHtml = discountedProducts.length > 0
+  const discountedProducts = products.filter(p => discountMap[p.id]);
+  const discountHtml = discountedProducts.length > 0
     ? '<div class="panel" style="background:linear-gradient(135deg,#FEF3C7,#FFFBEB); border:1.5px solid #D89A2E;">' +
-        '<div style="display:flex; align-items:center; gap:12px; margin-bottom:18px;">' +
-          '<div style="font-size:32px;">🔥</div>' +
+        '<div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">' +
+          '<div style="font-size:28px;">🔥</div>' +
           '<div><h2 style="margin:0; color:#7A5610;">Special offers for you</h2>' +
           '<p class="sub" style="margin:4px 0 0;">' + discountedProducts.length + ' supplier discount' + (discountedProducts.length > 1 ? 's' : '') + ' available now</p></div>' +
         '</div>' +
-        '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:14px;">' +
+        '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:14px;">' +
           discountedProducts.map(p => {
-            const d = discountMap[p.product_id];
-            const discountedPrice = p.unit_price * (1 - d.discount_percent / 100);
-            const suggestedQty = Math.max(d.min_quantity, Math.ceil(p.predicted_daily_demand * 5));
-            const savingsPerUnit = p.unit_price - discountedPrice;
+            const d = discountMap[p.id];
+            const discounted = p.unit_price * (1 - d.discount_percent / 100);
+            const savingsPerUnit = p.unit_price - discounted;
+            const suggestedQty = Math.max(d.min_quantity, Math.ceil((p.predicted_daily_demand || 5) * 5));
             const totalSavings = savingsPerUnit * suggestedQty;
-            return '<div style="background:white; border:1px solid rgba(216,154,46,0.35); border-radius:14px; padding:18px;">' +
-              '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">' +
-                '<div><div style="font-family:\'Space Grotesk\'; font-weight:700; font-size:16px; color:var(--ink);">' + p.product_name + '</div>' +
-                '<div style="font-size:11.5px; color:var(--muted); margin-top:2px;">' + p.category + '</div></div>' +
-                '<div style="text-align:right;"><div style="font-family:\'Space Grotesk\'; font-weight:700; font-size:22px; color:#C4432B; line-height:1;">' + d.discount_percent + '%</div><div style="font-size:10px; color:#7A5610; text-transform:uppercase;">off</div></div>' +
+            return '<div style="background:white; border:1px solid rgba(216,154,46,0.35); border-radius:14px; padding:16px;">' +
+              '<div style="display:flex; justify-content:space-between; margin-bottom:10px;">' +
+                '<div><div style="font-weight:700; font-size:15px;">' + p.name + '</div>' +
+                '<div style="font-size:11.5px; color:#6B6B6B; margin-top:2px;">' + p.category + '</div></div>' +
+                '<div style="text-align:right;"><div style="font-weight:700; font-size:22px; color:#C4432B; line-height:1;">' + d.discount_percent + '%</div>' +
+                '<div style="font-size:10px; color:#7A5610;">off</div></div>' +
               '</div>' +
-              '<div style="display:flex; align-items:baseline; gap:10px; padding:10px 12px; background:rgba(216,154,46,0.08); border-radius:8px; margin-bottom:12px;">' +
-                '<div style="font-family:\'Space Grotesk\'; font-weight:700; font-size:20px; color:var(--success);">' + fmtR(discountedPrice) + '</div>' +
-                '<div style="font-size:12px; color:var(--muted); text-decoration:line-through;">' + fmtR(p.unit_price) + '</div>' +
+              '<div style="display:flex; align-items:baseline; gap:10px; padding:10px; background:rgba(216,154,46,0.1); border-radius:8px; margin-bottom:10px;">' +
+                '<div style="font-weight:700; font-size:18px; color:#4C6B3F;">' + fmtR(discounted) + '</div>' +
+                '<div style="font-size:12px; color:#6B6B6B; text-decoration:line-through;">' + fmtR(p.unit_price) + '</div>' +
               '</div>' +
-              '<div style="font-size:12px; color:var(--ink-soft); margin-bottom:10px;">📦 Order <strong>' + d.min_quantity + '+ units</strong> to qualify</div>' +
-              '<div style="padding:10px 12px; background:rgba(76,107,63,0.10); border-radius:8px; font-size:12.5px; color:#2F4A26;">💰 Estimated savings: <strong>' + fmtR(totalSavings) + '</strong></div>' +
-              (d.valid_until ? '<div style="font-size:11px; color:var(--muted); margin-top:10px;">⏳ Valid until ' + d.valid_until + '</div>' : '') +
+              '<div style="font-size:12px; color:#4A4A4A; margin-bottom:8px;">📦 Order <strong>' + d.min_quantity + '+ units</strong> to qualify</div>' +
+              '<div style="padding:8px 12px; background:rgba(76,107,63,0.1); border-radius:8px; font-size:12px; color:#2F4A26;">💰 Estimated savings: <strong>' + fmtR(totalSavings) + '</strong></div>' +
             '</div>';
           }).join('') +
         '</div>' +
       '</div>'
     : '';
 
-  const urgentHtml = urgent.slice(0, 10).map(p => {
-    const days = (p.current_stock / p.predicted_daily_demand).toFixed(1);
-    const d = discountMap[p.product_id];
-    return '<div style="display:flex; align-items:center; gap:16px; padding:18px 20px; background:linear-gradient(135deg,#FEE2E2,#FECACA); border:1px solid rgba(196,67,43,0.30); border-radius:14px; margin-bottom:12px;">' +
-      '<div style="font-size:32px; flex-shrink:0;">🚨</div>' +
-      '<div style="flex:1;">' +
-        '<div style="font-weight:700; color:#8B2E1E; font-size:16px; margin-bottom:4px;">' + p.product_name + '</div>' +
-        '<div style="font-size:13.5px; color:#7A5610; line-height:1.5;">You\'ll probably sell about <strong style="color:#8B2E1E;">' + Math.round(p.predicted_daily_demand) + '</strong> tomorrow.<br>You currently have <strong style="color:#8B2E1E;">' + p.current_stock + '</strong> in stock.</div>' +
-        (d ? '<div style="font-size:12.5px; color:#8B2E1E; margin-top:6px; font-weight:600;">🔥 ' + d.discount_percent + '% off if you order ' + d.min_quantity + '+</div>' : '') +
-      '</div>' +
-      '<div style="text-align:right; flex-shrink:0;">' +
-        '<div style="font-family:\'Space Grotesk\'; font-weight:700; color:#8B2E1E; font-size:24px; line-height:1;">' + days + '</div>' +
-        '<div style="font-size:11px; color:#7A5610; text-transform:uppercase; letter-spacing:0.05em; margin-top:2px;">days left</div>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-
-  el.innerHTML = discountSectionHtml +
+  el.innerHTML = discountHtml +
     '<div class="panel">' +
       '<h2>What to stock tomorrow</h2>' +
-      '<p class="sub">Based on your recent sales and seasonal patterns. Suggestions only — you decide.</p>' +
-      (urgent.length > 0
-        ? '<div style="margin-top:22px;"><div style="font-size:13px; font-weight:700; color:var(--danger); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:14px;">⚠️ Needs attention (' + urgent.length + ')</div>' + urgentHtml + '</div>'
-        : '<div style="text-align:center; padding:60px 20px;"><div style="font-size:56px;">✅</div><div style="font-weight:700; font-size:20px; margin-top:14px; color:var(--success);">You\'re all set!</div><div style="color:var(--muted); font-size:14px; margin-top:8px;">Every product has enough stock.</div></div>') +
-      '<details style="margin-top:28px;"><summary style="cursor:pointer; font-weight:600; padding:14px 18px; background:var(--bg-soft); border-radius:12px; display:flex; justify-content:space-between; align-items:center;"><span>See all products (' + predictions.length + ')</span><span style="font-size:11px; color:var(--muted);">Click to expand</span></summary>' +
-        '<div class="table-scroll" style="margin-top:16px; max-height:500px;"><table><thead><tr><th>Product</th><th>Category</th><th class="num">Expected tomorrow</th><th class="num">You have</th><th>Offer</th></tr></thead><tbody>' +
-        predictions.map(p => {
-          const d = discountMap[p.product_id];
-          return '<tr><td class="name-cell">' + p.product_name + '</td><td>' + p.category + '</td><td class="num">' + Math.round(p.predicted_daily_demand) + '</td><td class="num">' + p.current_stock + '</td><td>' + (d ? '<span class="chip low">🔥 ' + d.discount_percent + '% off (min ' + d.min_quantity + ')</span>' : '<span style="color:var(--muted);">—</span>') + '</td></tr>';
-        }).join('') +
-        '</tbody></table></div></details></div>';
-}
+      '<p class="sub">Based on your own products. Click <strong>Predict</strong> for a live ML prediction.</p>' +
+      '<div class="table-scroll" style="max-height:520px;"><table><thead><tr><th>Product</th><th>Category</th><th class="num">Expected/day</th><th class="num">You have</th><th>Offer</th><th></th></tr></thead><tbody>' +
+      products.map(p => {
+        const d = discountMap[p.id];
+        const offerHtml = d ? '<span class="chip low">🔥 ' + d.discount_percent + '% off</span>' : '<span style="color:#6B6B6B;">—</span>';
+        return '<tr><td class="name-cell">' + p.name + '</td><td>' + p.category + '</td><td class="num">' + Math.round(p.predicted_daily_demand || 0) + '</td><td class="num">' + p.current_stock + '</td><td>' + offerHtml + '</td><td><button class="filter-btn predict-btn" data-pid="' + p.id + '" style="padding:6px 14px; font-size:12px; background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border:none; font-weight:700;">🔮 Predict</button></td></tr>';
+      }).join('') +
+      '</tbody></table></div>' +
+    '</div>';
 
-/* ==================== INVENTORY & REORDER ==================== */
-
-let reorderFilter = 'All';
-
-function renderInventory(){
-  const el = document.getElementById('view-inventory');
-  const nn = DATA.reorder_decision_counts.find(d=>d.decision==='NO ORDER NEEDED');
-  const on = DATA.reorder_decision_counts.find(d=>d.decision==='ORDER NOW');
-  const os = DATA.reorder_decision_counts.find(d=>d.decision==='ORDER SOON');
-  el.innerHTML = '<div class="stat-strip" style="margin-bottom:24px;">' +
-    '<div class="cell"><div class="v" style="color:var(--danger)">' + (on?on.count:0) + '</div><div class="l">products — order now</div></div>' +
-    '<div class="cell"><div class="v" style="color:var(--warning)">' + (os?os.count:0) + '</div><div class="l">products — order soon</div></div>' +
-    '<div class="cell"><div class="v" style="color:var(--success)">' + (nn?nn.count:0) + '</div><div class="l">products — no order needed</div></div>' +
-    '<div class="cell"><div class="v">' + fmtR(DATA.total_reorder_cost) + '</div><div class="l">Estimated reorder spend</div></div></div>'
-    + '<div class="grid grid-2"><div class="panel"><h2>Stock status across the network</h2><p class="sub">62 products classified by current inventory position.</p><div class="chart-wrap" style="height:260px;"><canvas id="chart-stockstatus"></canvas></div></div><div class="panel"><h2>Lowest days of stock remaining</h2><p class="sub">The 15 products closest to running out.</p><div class="table-scroll" style="max-height:260px;"><table><thead><tr><th>Product</th><th class="num">Stock</th><th class="num">Days left</th><th>Status</th></tr></thead><tbody>'
-    + DATA.low_stock_items.map(i => '<tr><td class="name-cell">' + i.name + '<div class="sub-cell">' + i.category + '</div></td><td class="num">' + i.current_stock + '</td><td class="num">' + i.days_remaining + '</td><td>' + statusChip(i.status) + '</td></tr>').join('')
-    + '</tbody></table></div></div></div>'
-    + '<div class="panel"><h2>AI reorder recommendations</h2><p class="sub">Generated from predicted daily demand, supplier lead time and safety stock. Filter by priority.</p><div class="filter-row" id="reorder-filters"></div><div class="table-scroll"><table><thead><tr><th>Product</th><th>Priority</th><th>Decision</th><th class="num">Predicted demand/day</th><th class="num">Order qty</th><th class="num">Est. cost</th><th>Supplier</th></tr></thead><tbody id="reorder-body"></tbody></table></div></div>';
-
-  new Chart(document.getElementById('chart-stockstatus'),{type:'doughnut',data:{labels:DATA.stock_status.map(s=>s.status),datasets:[{data:DATA.stock_status.map(s=>s.count),backgroundColor:DATA.stock_status.map(s=>({'Low Stock':VERM,'Monitor':MARIGOLD,'In Stock':GREEN,'Overstocked':INDIGO}[s.status]||'#999')),borderColor:'#FBF8EF',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:10,color:'#4A4A4A'}}}}});
-
-  const fRow = document.getElementById('reorder-filters');
-  ['All','High','Medium','Low'].forEach(f=>{
-    const b = document.createElement('button');
-    b.className = 'filter-btn' + (f===reorderFilter?' active':'');
-    b.textContent = f==='All'?'All priorities':f+' priority';
-    b.onclick = () => {reorderFilter=f;renderReorderTable();document.querySelectorAll('#reorder-filters .filter-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');};
-    fRow.appendChild(b);
+  el.querySelectorAll('.predict-btn').forEach(btn => {
+    btn.onclick = (e) => { e.preventDefault(); openPredictModal(btn.dataset.pid, products); };
   });
-  renderReorderTable();
-
-  const bar = document.createElement('div');
-  bar.id = 'inventory-button-bar';
-  bar.className = 'filter-row';
-  bar.style.marginBottom = '22px';
-  bar.innerHTML =
-    '<button id="record-sale-btn" class="filter-btn active" style="background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;border:none;font-weight:700;padding:10px 20px;">➕ Record a sale</button>' +
-    '<button id="add-product-btn" class="filter-btn" style="padding:10px 20px;">➕ Add product</button>' +
-    '<button id="update-stock-btn" class="filter-btn" style="padding:10px 20px;">✏️ Update stock</button>' +
-    '<button id="export-reorder-btn" class="filter-btn" style="padding:10px 20px;">📥 Export CSV</button>' +
-    '<button id="refresh-inventory-btn" class="filter-btn" style="padding:10px 20px;">🔄 Refresh</button>';
-  el.insertBefore(bar, el.firstChild);
-  document.getElementById('record-sale-btn').onclick = openRecordSaleModal;
-  document.getElementById('add-product-btn').onclick = openAddProductModal;
-  document.getElementById('update-stock-btn').onclick = openUpdateStockModal;
-  document.getElementById('refresh-inventory-btn').onclick = renderInventory;
-  document.getElementById('export-reorder-btn').onclick = () => {
-    const rows = DATA.reorder_all.map(r => ({
-      Product: r.name,
-      Category: r.category,
-      Priority: r.priority,
-      Decision: r.decision,
-      'Current stock': r.current_stock,
-      'Predicted demand/day': r.predicted_daily_demand,
-      'Order qty': r.order_qty,
-      'Est. cost (R)': r.est_cost,
-      Supplier: r.supplier
-    }));
-    exportCSV('streetsmart-reorder-' + new Date().toISOString().slice(0,10) + '.csv', rows);
-  };
 }
 
-function renderReorderTable(){
-  const body = document.getElementById('reorder-body');
-  if (!body) return;
-  const rows = DATA.reorder_all.filter(r=>reorderFilter==='All'||r.priority===reorderFilter);
-  body.innerHTML = rows.map(r=>'<tr><td class="name-cell">' + r.name + '<div class="sub-cell">' + r.category + ' · ' + r.current_stock + ' in stock</div></td><td>' + priorityChip(r.priority) + '</td><td>' + decisionChip(r.decision) + '</td><td class="num">' + r.predicted_daily_demand + '</td><td class="num">' + fmtNum(r.order_qty) + '</td><td class="num">' + fmtR(r.est_cost) + '</td><td>' + r.supplier + '</td></tr>').join('');
-}
+async function openPredictModal(productId, products){
+  const product = products.find(p => p.id === productId);
+  if (!product) return;
 
-/* ==================== SUPPLIERS ==================== */
-
-function renderSuppliers(){
-  const el = document.getElementById('view-suppliers');
-  el.innerHTML = '<div class="grid grid-2"><div class="panel"><h2>Supplier rating vs. on-time delivery</h2><p class="sub">Each point is one supplier; upper-right is the sweet spot.</p><div class="chart-wrap" style="height:320px;"><canvas id="chart-supplier-scatter"></canvas></div></div><div class="panel"><h2>Supplier status</h2><p class="sub">Tiering used to prioritise reorder routing.</p><div class="chart-wrap" style="height:320px;"><canvas id="chart-supplier-status"></canvas></div></div></div>'
-    + '<div class="panel"><h2>Supplier directory</h2><p class="sub">All ' + DATA.suppliers.length + ' active suppliers, ranked by rating.</p><div class="table-scroll" style="max-height:420px;"><table><thead><tr><th>Supplier</th><th>City</th><th>Category</th><th class="num">Rating</th><th class="num">On-time %</th><th class="num">Quality</th><th class="num">Lead time</th><th>Status</th></tr></thead><tbody>'
-    + DATA.suppliers.map(s => '<tr><td class="name-cell">' + s.name + '</td><td>' + s.city + '</td><td>' + s.category + '</td><td class="num">' + s.rating.toFixed(1) + '</td><td class="num">' + s.on_time + '%</td><td class="num">' + s.quality + '</td><td class="num">' + s.lead_time + 'd</td><td><span class="chip ' + (s.status==='Preferred'?'low':s.status==='Reliable'?'medium':'soon') + '">' + s.status + '</span></td></tr>').join('')
-    + '</tbody></table></div></div>';
-  new Chart(document.getElementById('chart-supplier-scatter'),{type:'scatter',data:{datasets:[{label:'Suppliers',data:DATA.suppliers.map(s=>({x:s.on_time,y:s.rating,label:s.name})),backgroundColor:'rgba(196,67,43,0.6)',borderColor:INDIGO,pointRadius:5,pointHoverRadius:7}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw.label+': rating '+ctx.raw.y+', on-time '+ctx.raw.x+'%'}}},scales:{x:{title:{display:true,text:'On-time delivery %'},grid:{color:LINE}},y:{title:{display:true,text:'Supplier rating'},grid:{color:LINE}}}}});
-  const sc = {Preferred:GREEN,Reliable:MARIGOLD,Active:INDIGO};
-  new Chart(document.getElementById('chart-supplier-status'),{type:'doughnut',data:{labels:DATA.supplier_status.map(s=>s.status),datasets:[{data:DATA.supplier_status.map(s=>s.count),backgroundColor:DATA.supplier_status.map(s=>sc[s.status]||'#999'),borderColor:'#FBF8EF',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:10,color:'#4A4A4A'}}}}});
-}
-
-/* ==================== RECORD SALE MODAL ==================== */
-
-function openRecordSaleModal(){
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px; backdrop-filter: blur(4px);';
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
+  let myVendor = (session && session.vendorId) ? (DATA.vendors || []).find(x => x.id === session.vendorId) : null;
+  if (!myVendor) { try { myVendor = await API.request('/vendors/me'); } catch(e){} }
+  const myCity = myVendor ? myVendor.city : 'Durban';
 
-  const productOptions = DATA.reorder_all.map(p =>
-    '<option value="' + p.id + '" data-stock="' + p.current_stock + '" data-price="' + p.unit_price + '">' + p.name + ' — ' + p.current_stock + ' in stock @ ' + fmtR(p.unit_price) + '</option>'
-  ).join('');
-
-  overlay.innerHTML = '<div style="background:#FBF8EF; border:1px solid rgba(0,0,0,0.15); border-radius:20px; max-width:520px; width:100%; padding:32px;">' +
-    '<h2 style="font-family:\'Space Grotesk\'; font-size:22px; margin:0 0 6px; color:#000;">Record a sale</h2>' +
-    '<p style="font-size:13px; color:#4A4A4A; margin:0 0 24px;">Select the product sold and enter the quantity.</p>' +
-    '<label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;">Product sold</label>' +
-    '<select id="sale-product" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-family:\'Inter\'; font-size:14px; margin-bottom:18px;">' + productOptions + '</select>' +
-    '<label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;">Quantity sold</label>' +
-    '<input type="number" id="sale-qty" min="1" value="1" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-family:\'Inter\'; font-size:14px; margin-bottom:18px;">' +
-    '<div id="sale-summary" style="padding:14px; background:#F5F0E1; border-radius:10px; margin-bottom:20px; font-size:13px; color:#4A4A4A;">Select a product to see the summary.</div>' +
-    '<div id="sale-error" style="color:#C4432B; font-size:13px; min-height:18px; margin-bottom:14px;"></div>' +
-    '<div style="display:flex; gap:10px;">' +
-      '<button id="sale-cancel" class="filter-btn" style="flex:1; padding:12px;">Cancel</button>' +
-      '<button id="sale-submit" class="filter-btn active" style="flex:2; padding:12px;">Confirm sale</button>' +
-    '</div></div>';
-
+  overlay.innerHTML = '<div style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border-radius:20px; max-width:600px; width:100%; padding:32px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.5);">' +
+    '<h2 style="font-family:Space Grotesk,sans-serif; font-size:22px; margin:0 0 12px; color:#ffffff;">Predict demand</h2>' +
+    '<p style="font-size:13px; color:#DCE6F2; margin:0 0 12px;">' + product.name + ' · ' + product.category + '</p>' +
+    '<p id="pred-weather-note" style="font-size:12px; color:#ffffff; margin:0 0 20px; padding:8px 12px; background:rgba(255,255,255,0.15); border-radius:8px;">Fetching live weather for ' + myCity + '...</p>' +
+    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">' +
+      '<div><label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px; color:#DCE6F2;">Weather</label><select id="pred-weather" style="width:100%; padding:10px; background:#ffffff; color:#1E4E8C; border-radius:8px; border:1px solid rgba(255,255,255,0.5); font-weight:600;"><option>Sunny</option><option>Cloudy</option><option>Rainy</option></select></div>' +
+      '<div><label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px; color:#DCE6F2;">Holiday</label><select id="pred-holiday" style="width:100%; padding:10px; background:#ffffff; color:#1E4E8C; border-radius:8px; border:1px solid rgba(255,255,255,0.5); font-weight:600;"><option>No</option><option>Yes</option></select></div>' +
+    '</div>' +
+    '<button id="pred-run" style="width:100%; padding:12px; background:#ffffff; color:#1E4E8C; font-weight:700; border:none; border-radius:10px; margin-bottom:18px; cursor:pointer; font-size:14px;">Run prediction</button>' +
+    '<div id="pred-result" style="display:none;"></div>' +
+    '<div id="pred-history-section" style="display:none; margin-top:22px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.2);">' +
+      '<h3 style="font-size:14px; font-weight:700; margin:0 0 12px; color:#ffffff;">Recent predictions for this product</h3>' +
+      '<div id="pred-history-list"></div>' +
+    '</div>' +
+    '<div id="pred-error" style="color:#FFD5C0; font-size:13px; min-height:18px; margin-top:14px;"></div>' +
+    '<div style="display:flex; gap:10px; margin-top:14px;"><button id="pred-close" style="flex:1; padding:12px; background:rgba(255,255,255,0.15); color:#ffffff; border:1px solid rgba(255,255,255,0.4); border-radius:10px; font-weight:700; cursor:pointer;">Close</button></div>' +
+  '</div>';
   document.body.appendChild(overlay);
+  overlay.querySelector('#pred-close').onclick = () => overlay.remove();
 
-  const select = overlay.querySelector('#sale-product');
-  const qtyInput = overlay.querySelector('#sale-qty');
-  const summary = overlay.querySelector('#sale-summary');
-  const errorEl = overlay.querySelector('#sale-error');
-
-  function updateSummary(){
-    const opt = select.options[select.selectedIndex];
-    const stock = parseInt(opt.dataset.stock);
-    const price = parseFloat(opt.dataset.price);
-    const qty = parseInt(qtyInput.value) || 0;
-    const remaining = stock - qty;
-    summary.innerHTML = '<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>Unit price:</span><strong>' + fmtR(price) + '</strong></div><div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>Total:</span><strong>' + fmtR(qty * price) + '</strong></div><div style="display:flex; justify-content:space-between;"><span>Stock after sale:</span><strong style="color:' + (remaining < 0 ? '#C4432B' : remaining < 10 ? '#D89A2E' : '#4C6B3F') + '">' + remaining + ' units</strong></div>';
-    if (remaining < 0) errorEl.textContent = '❌ Not enough stock.';
-    else errorEl.textContent = '';
-  }
-  select.onchange = updateSummary;
-  qtyInput.oninput = updateSummary;
-  updateSummary();
-
-  overlay.querySelector('#sale-cancel').onclick = () => overlay.remove();
-
-  overlay.querySelector('#sale-submit').onclick = async () => {
-    errorEl.textContent = '';
-    const product_id = select.value;
-    const quantity = parseInt(qtyInput.value);
-    if (!quantity || quantity < 1){ errorEl.textContent = '❌ Quantity must be at least 1.'; return; }
-    try {
-      const res = await API.recordSale(product_id, quantity);
-      const product = DATA.reorder_all.find(p => p.id === product_id);
-      if (product) product.current_stock = res.product.current_stock;
-      overlay.remove();
-      alert('✅ ' + res.message);
-      renderInventory();
-    } catch (err){
-      errorEl.textContent = '❌ ' + err.message;
+  API.weather(myCity).then(w => {
+    const noteEl = overlay.querySelector('#pred-weather-note');
+    if (!noteEl) return;
+    noteEl.innerHTML = 'Live weather in ' + myCity + ': ' + w.temperature + '°C, ' + (w.description || w.weather);
+    const sel = overlay.querySelector('#pred-weather');
+    if (sel && w.weather){
+      const target = ['Sunny','Cloudy','Rainy'].includes(w.weather) ? w.weather : 'Sunny';
+      sel.value = target;
     }
+  }).catch(() => {});
+
+  function renderHistory(rows){
+    const section = overlay.querySelector('#pred-history-section');
+    const list = overlay.querySelector('#pred-history-list');
+    if (!rows || rows.length === 0){ section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    list.innerHTML = '<table style="width:100%; font-size:12.5px; border-collapse:collapse; color:#fff;"><thead><tr style="text-align:left; border-bottom:1px solid rgba(255,255,255,0.2);"><th style="padding:6px 8px; color:#DCE6F2; font-weight:600;">When</th><th style="padding:6px 8px; color:#DCE6F2; font-weight:600; text-align:right;">Demand</th><th style="padding:6px 8px; color:#DCE6F2; font-weight:600;">Conditions</th></tr></thead><tbody>' +
+      rows.map(r => '<tr style="border-bottom:1px solid rgba(255,255,255,0.1);"><td style="padding:8px; color:#DCE6F2;">' + new Date(r.predicted_at).toLocaleString('en-ZA') + '</td><td style="padding:8px; text-align:right; font-weight:700; color:#fff;">' + r.predicted_demand + '</td><td style="padding:8px; color:#DCE6F2;">' + (r.day_of_week || '') + ', ' + (r.season || '') + ', ' + (r.weather || '') + ', Holiday=' + (r.holiday || '') + '</td></tr>').join('') +
+      '</tbody></table>';
+  }
+
+  API.predictionHistory(product.id).then(renderHistory).catch(() => {});
+
+  overlay.querySelector('#pred-run').onclick = async () => {
+    const errEl = overlay.querySelector('#pred-error');
+    const resultEl = overlay.querySelector('#pred-result');
+    errEl.textContent = '';
+    resultEl.style.display = 'none';
+    const btn = overlay.querySelector('#pred-run');
+    btn.disabled = true; btn.textContent = 'Running...';
+    const today = new Date();
+    const dow = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][today.getDay()];
+    const month = today.getMonth() + 1;
+    const season = (month === 12 || month <= 2) ? 'Summer' : (month <= 5) ? 'Autumn' : (month <= 8) ? 'Winter' : 'Spring';
+    const isWeekend = (today.getDay() === 0 || today.getDay() === 6) ? 'Yes' : 'No';
+    const weather = overlay.querySelector('#pred-weather').value;
+    const holiday = overlay.querySelector('#pred-holiday').value;
+    const payload = { Category: product.category, Vendor_Type: myVendor ? myVendor.type : 'General Vendor', City: myCity, Day_of_Week: dow, Season: season, Weather: weather, Holiday: holiday, Is_Weekend: isWeekend, Month: month, Discount: 0, Cost_Price: Math.round((product.unit_price * 0.7) * 100) / 100, Selling_Price: product.unit_price };
+    try {
+      const res = await API.savePrediction({ product_id: product.id, weather, holiday, payload });
+      const pred = res.predicted_daily_demand;
+      const days = pred > 0 ? (product.current_stock / pred).toFixed(1) : '-';
+      const lt = product.supplier_lead_time || 3;
+      const orderQty = Math.max(0, Math.ceil(pred * (lt + 3) - product.current_stock));
+      resultEl.style.display = 'block';
+      resultEl.innerHTML = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;"><div style="padding:16px; background:rgba(255,255,255,0.15); border-radius:12px;"><div style="font-size:11px; color:#DCE6F2;">Predicted / day</div><div style="font-size:32px; font-weight:700; color:#ffffff;">' + pred + '</div></div><div style="padding:16px; background:rgba(255,255,255,0.15); border-radius:12px;"><div style="font-size:11px; color:#DCE6F2;">Days of stock</div><div style="font-size:32px; font-weight:700; color:#ffffff;">' + days + '</div></div></div><div style="padding:14px; background:rgba(255,255,255,0.15); border-radius:12px; font-size:13px; color:#ffffff;"><strong>Suggested order:</strong> <span style="color:#ffffff; font-weight:700;">' + orderQty + ' units</span></div>';
+      API.predictionHistory(product.id).then(renderHistory).catch(() => {});
+    } catch (err){ errEl.textContent = 'Error: ' + err.message; }
+    finally { btn.disabled = false; btn.textContent = 'Run prediction'; }
   };
 }
 
-/* ==================== ADD PRODUCT MODAL ==================== */
+/* INVENTORY */
+async function renderInventory(){
+  const el = document.getElementById('view-inventory');
+  el.innerHTML = '<div class="panel"><p class="sub">Loading…</p></div>';
+  let products = [];
+  try { products = await API.myProducts(); } catch (e){ el.innerHTML = '<div class="panel"><h2>Could not load</h2></div>'; return; }
+  if (!products || products.length === 0){ el.innerHTML = '<div class="panel"><h2>No products yet</h2></div>'; return; }
+  const low = products.filter(p => (p.current_stock || 0) <= (p.reorder_level || 0));
+  const inS = products.filter(p => (p.current_stock || 0) > (p.reorder_level || 0));
+  const val = products.reduce((s, p) => s + ((p.current_stock || 0) * (p.unit_price || 0)), 0);
+  el.innerHTML = '<div class="filter-row" style="margin-bottom:22px;">' +
+      '<button id="record-sale-btn" class="filter-btn active" style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border:none; font-weight:700; padding:10px 20px;">➕ Record a sale</button>' +
+      '<button id="add-product-btn" class="filter-btn" style="padding:10px 20px;">➕ Add product</button>' +
+      '<button id="update-stock-btn" class="filter-btn" style="padding:10px 20px;">✏️ Update stock</button>' +
+      '<button id="refresh-inventory-btn" class="filter-btn" style="padding:10px 20px;">🔄 Refresh</button>' +
+    '</div>' +
+    '<div class="stat-strip" style="margin-bottom:24px;">' +
+      '<div class="cell"><div class="v" style="color:var(--danger)">' + low.length + '</div><div class="l">need reorder</div></div>' +
+      '<div class="cell"><div class="v" style="color:var(--success)">' + inS.length + '</div><div class="l">in stock</div></div>' +
+      '<div class="cell"><div class="v">' + fmtNum(products.length) + '</div><div class="l">total products</div></div>' +
+      '<div class="cell"><div class="v">' + fmtR(val) + '</div><div class="l">stock value</div></div>' +
+    '</div>' +
+    '<div class="panel"><h2>Your inventory</h2><div class="table-scroll"><table><thead><tr><th>Product</th><th>Category</th><th class="num">Stock</th><th class="num">Reorder</th><th class="num">Price</th><th class="num">Market avg</th><th>Suggestion</th><th>Supplier</th></tr></thead><tbody>' +
+    products.map(p => {
+      const a = priceAdvice(p.unit_price, p.category);
+      return '<tr><td class="name-cell">' + p.name + '</td><td>' + p.category + '</td><td class="num">' + (p.current_stock || 0) + '</td><td class="num">' + (p.reorder_level || 0) + '</td><td class="num">' + fmtR(p.unit_price) + '</td><td class="num" style="color:#6B6B6B;">' + (a.avg ? fmtR(a.avg) : '—') + '</td><td><span style="color:' + a.color + '; font-weight:600; font-size:12.5px;">' + a.label + '</span></td><td>' + (p.supplier_name || '—') + '</td></tr>';
+    }).join('') +
+    '</tbody></table></div></div>';
+  document.getElementById('refresh-inventory-btn').onclick = renderInventory;
+  document.getElementById('record-sale-btn').onclick = () => openRecordSaleModal(products);
+  document.getElementById('add-product-btn').onclick = () => openAddProductModal();
+  document.getElementById('update-stock-btn').onclick = () => openUpdateStockModal(products);
+}
+
+function openRecordSaleModal(products){
+  const sellable = products.filter(p => (p.current_stock || 0) > 0);
+  if (sellable.length === 0){
+    alert('You have no stock to sell. Update stock first.');
+    return;
+  }
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
+  const opts = sellable.map(p => '<option value="' + p.id + '" style="color:#000;">' + p.name + ' - ' + (p.current_stock || 0) + ' in stock</option>').join('');
+  overlay.innerHTML = '<div style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border-radius:20px; max-width:520px; width:100%; padding:32px; box-shadow:0 20px 60px rgba(0,0,0,0.5);">' +
+    '<h2 style="font-family:Space Grotesk,sans-serif; font-size:22px; margin:0 0 20px; color:#ffffff;">Record a sale</h2>' +
+    '<label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#DCE6F2;">Product</label>' +
+    '<select id="sale-product" style="width:100%; padding:12px; background:#ffffff; color:#1E4E8C; border:1px solid rgba(255,255,255,0.5); border-radius:10px; margin-bottom:18px; font-weight:600;">' + opts + '</select>' +
+    '<label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#DCE6F2;">Quantity</label>' +
+    '<input type="number" id="sale-qty" min="1" value="1" style="width:100%; padding:12px; background:#ffffff; color:#1E4E8C; border:1px solid rgba(255,255,255,0.5); border-radius:10px; margin-bottom:18px; font-weight:600; font-size:14px;">' +
+    '<div id="sale-error" style="color:#FFD5C0; font-size:13px; min-height:18px; margin-bottom:14px;"></div>' +
+    '<div style="display:flex; gap:10px;">' +
+      '<button id="sale-cancel" style="flex:1; padding:12px; background:rgba(255,255,255,0.15); color:#ffffff; border:1px solid rgba(255,255,255,0.4); border-radius:10px; font-weight:700; cursor:pointer;">Cancel</button>' +
+      '<button id="sale-submit" style="flex:2; padding:12px; background:#ffffff; color:#1E4E8C; border:none; border-radius:10px; font-weight:700; cursor:pointer;">Confirm sale</button>' +
+    '</div>' +
+  '</div>';
+  document.body.appendChild(overlay);
+  overlay.querySelector('#sale-cancel').onclick = () => overlay.remove();
+  overlay.querySelector('#sale-submit').onclick = async () => {
+    const errEl = overlay.querySelector('#sale-error');
+    errEl.textContent = '';
+    const pid = overlay.querySelector('#sale-product').value;
+    const qty = parseInt(overlay.querySelector('#sale-qty').value);
+    if (!qty || qty < 1){ errEl.textContent = 'Quantity must be at least 1.'; return; }
+    try {
+      const res = await API.recordSale(pid, qty);
+      overlay.remove();
+      alert(res.message);
+      renderedTabs.delete('overview');
+      renderedTabs.delete('sales');
+      renderInventory();
+    } catch (err){ errEl.textContent = 'Error: ' + err.message; }
+  };
+}
 
 function openAddProductModal(){
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
-
-  const categoryOptions = Object.keys(CAT_HEX).map(c => '<option value="' + c + '">' + c + '</option>').join('');
-  const supplierOptions = (DATA.suppliers || []).map(s => '<option value="' + s.id + '">' + s.name + '</option>').join('');
-
-  overlay.innerHTML = '<div style="background:#FBF8EF; border:1px solid rgba(0,0,0,0.15); border-radius:20px; max-width:560px; width:100%; padding:32px;">' +
-    '<h2 style="font-family:\'Space Grotesk\'; font-size:22px; margin:0 0 6px; color:#000;">Add new product</h2>' +
-    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:16px 0;">' +
-      '<div><label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;">Product ID</label><input id="new-id" placeholder="P0063" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-size:14px;"></div>' +
-      '<div><label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;">Name</label><input id="new-name" placeholder="Product name" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-size:14px;"></div>' +
-    '</div>' +
-    '<label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;">Category</label>' +
-    '<select id="new-category" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-size:14px; margin-bottom:16px;">' + categoryOptions + '</select>' +
-    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">' +
-      '<div><label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;">Unit price (R)</label><input id="new-price" type="number" step="0.01" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-size:14px;"></div>' +
-      '<div><label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;">Initial stock</label><input id="new-stock" type="number" value="0" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-size:14px;"></div>' +
-    '</div>' +
-    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">' +
-      '<div><label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;">Reorder level</label><input id="new-reorder" type="number" value="20" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-size:14px;"></div>' +
-      '<div><label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;">Supplier</label><select id="new-supplier" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-size:14px;"><option value="">(none)</option>' + supplierOptions + '</select></div>' +
-    '</div>' +
-    '<div id="add-product-error" style="color:#C4432B; font-size:13px; min-height:18px; margin-bottom:14px;"></div>' +
-    '<div style="display:flex; gap:10px;"><button id="add-product-cancel" class="filter-btn" style="flex:1; padding:12px;">Cancel</button><button id="add-product-submit" class="filter-btn active" style="flex:2; padding:12px;">Create product</button></div>' +
-    '</div>';
-
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
+  const cats = Object.keys(CAT_HEX || {}).map(c => '<option value="' + c + '" style="color:#000;">' + c + '</option>').join('');
+  const inp = 'width:100%; padding:12px; background:#ffffff; color:#1E4E8C; border:1px solid rgba(255,255,255,0.5); border-radius:10px; margin-bottom:16px; font-weight:600; font-size:14px;';
+  const lbl = 'display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#DCE6F2;';
+  overlay.innerHTML = '<div style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border-radius:20px; max-width:560px; width:100%; padding:32px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.5);">' +
+    '<h2 style="font-family:Space Grotesk,sans-serif; font-size:22px; margin:0 0 20px; color:#ffffff;">Add product</h2>' +
+    '<label style="' + lbl + '">Product ID</label><input id="np-id" placeholder="P0063" style="' + inp + '">' +
+    '<label style="' + lbl + '">Name</label><input id="np-name" style="' + inp + '">' +
+    '<label style="' + lbl + '">Category</label><select id="np-category" style="' + inp + '">' + cats + '</select>' +
+    '<label style="' + lbl + '">Cost price (R)</label><input id="np-cost" type="number" step="0.01" style="' + inp + '">' +
+    '<button id="np-suggest" style="padding:10px 16px; margin-bottom:16px; background:rgba(255,255,255,0.15); color:#ffffff; border:1px solid rgba(255,255,255,0.4); border-radius:10px; font-weight:700; cursor:pointer;">Suggest price (40% markup)</button>' +
+    '<label style="' + lbl + '">Selling price (R)</label><input id="np-price" type="number" step="0.01" style="' + inp + '">' +
+    '<div id="np-advice" style="font-size:12.5px; min-height:18px; margin-bottom:16px; color:#DCE6F2;"></div>' +
+    '<div id="np-error" style="color:#FFD5C0; font-size:13px; min-height:18px; margin-bottom:14px;"></div>' +
+    '<div style="display:flex; gap:10px;"><button id="np-cancel" style="flex:1; padding:12px; background:rgba(255,255,255,0.15); color:#ffffff; border:1px solid rgba(255,255,255,0.4); border-radius:10px; font-weight:700; cursor:pointer;">Cancel</button><button id="np-submit" style="flex:2; padding:12px; background:#ffffff; color:#1E4E8C; border:none; border-radius:10px; font-weight:700; cursor:pointer;">Create</button></div>' +
+  '</div>';
   document.body.appendChild(overlay);
-
-  overlay.querySelector('#add-product-cancel').onclick = () => overlay.remove();
-
-  overlay.querySelector('#add-product-submit').onclick = async () => {
-    const errorEl = overlay.querySelector('#add-product-error');
-    errorEl.textContent = '';
-
-    const payload = {
-      id: overlay.querySelector('#new-id').value.trim(),
-      name: overlay.querySelector('#new-name').value.trim(),
-      category: overlay.querySelector('#new-category').value,
-      unit_price: parseFloat(overlay.querySelector('#new-price').value),
-      current_stock: parseInt(overlay.querySelector('#new-stock').value) || 0,
-      reorder_level: parseInt(overlay.querySelector('#new-reorder').value) || 20,
-      supplier_id: overlay.querySelector('#new-supplier').value || null
-    };
-
-    if (!payload.id || !payload.name || !payload.unit_price){ errorEl.textContent = '❌ ID, name, and price required.'; return; }
-    if (isNaN(payload.unit_price) || payload.unit_price <= 0){ errorEl.textContent = '❌ Price must be positive.'; return; }
-
-    try {
-      await API.addProduct(payload);
-      DATA.reorder_all.push({ id: payload.id, name: payload.name, category: payload.category, unit_price: payload.unit_price, current_stock: payload.current_stock, predicted_daily_demand: 0 });
-      overlay.remove();
-      alert('✅ ' + payload.name + ' added');
-      renderInventory();
-    } catch (err){
-      errorEl.textContent = '❌ ' + err.message;
-    }
+  const costEl = overlay.querySelector('#np-cost');
+  const priceEl = overlay.querySelector('#np-price');
+  const catEl = overlay.querySelector('#np-category');
+  const adviceEl = overlay.querySelector('#np-advice');
+  function upd(){
+    const price = parseFloat(priceEl.value);
+    if (!price) { adviceEl.textContent = ''; return; }
+    const a = priceAdvice(price, catEl.value);
+    adviceEl.innerHTML = '<span style="color:#fff; font-weight:600;">' + a.label + '</span> · Market avg: ' + fmtR(a.avg);
+  }
+  priceEl.oninput = upd; catEl.onchange = upd;
+  overlay.querySelector('#np-suggest').onclick = () => {
+    const cst = parseFloat(costEl.value);
+    if (!cst || cst <= 0){ adviceEl.textContent = 'Enter a cost price.'; return; }
+    priceEl.value = suggestedPriceFromCost(cst);
+    upd();
+  };
+  overlay.querySelector('#np-cancel').onclick = () => overlay.remove();
+  overlay.querySelector('#np-submit').onclick = async () => {
+    const errEl = overlay.querySelector('#np-error');
+    errEl.textContent = '';
+    const payload = { id: overlay.querySelector('#np-id').value.trim(), name: overlay.querySelector('#np-name').value.trim(), category: catEl.value, unit_price: parseFloat(priceEl.value), current_stock: 0, reorder_level: 20 };
+    if (!payload.id || !payload.name || !payload.unit_price){ errEl.textContent = 'ID, name, price required.'; return; }
+    try { await API.addProduct(payload); overlay.remove(); alert(payload.name + ' added'); renderInventory(); }
+    catch (err){ errEl.textContent = 'Error: ' + err.message; }
   };
 }
 
-/* ==================== UPDATE STOCK MODAL ==================== */
-
-function openUpdateStockModal(){
+function openUpdateStockModal(products){
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
-
-  const productOptions = DATA.reorder_all.map(p =>
-    '<option value="' + p.id + '" data-stock="' + p.current_stock + '">' + p.name + ' — ' + p.current_stock + ' units</option>'
-  ).join('');
-
-  overlay.innerHTML = '<div style="background:#FBF8EF; border:1px solid rgba(0,0,0,0.15); border-radius:20px; max-width:500px; width:100%; padding:32px;">' +
-    '<h2 style="font-family:\'Space Grotesk\'; font-size:22px; margin:0 0 6px; color:#000;">Update stock</h2>' +
-    '<label style="display:block; font-size:12.5px; font-weight:600; margin:16px 0 8px; color:#000;">Product</label>' +
-    '<select id="stock-product" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-size:14px; margin-bottom:18px;">' + productOptions + '</select>' +
-    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px;">' +
-      '<button id="mode-set" class="filter-btn active" style="padding:10px;">Set exact</button>' +
-      '<button id="mode-receive" class="filter-btn" style="padding:10px;">Receive delivery</button>' +
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
+  const opts = products.map(p => '<option value="' + p.id + '" style="color:#000;">' + p.name + ' - ' + (p.current_stock || 0) + ' units</option>').join('');
+  overlay.innerHTML = '<div style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border-radius:20px; max-width:500px; width:100%; padding:32px; box-shadow:0 20px 60px rgba(0,0,0,0.5);">' +
+    '<h2 style="font-family:Space Grotesk,sans-serif; font-size:22px; margin:0 0 20px; color:#ffffff;">Update stock</h2>' +
+    '<label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#DCE6F2;">Product</label>' +
+    '<select id="stock-product" style="width:100%; padding:12px; background:#ffffff; color:#1E4E8C; border:1px solid rgba(255,255,255,0.5); border-radius:10px; margin-bottom:18px; font-weight:600;">' + opts + '</select>' +
+    '<label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#DCE6F2;">New stock level</label>' +
+    '<input id="stock-qty" type="number" min="0" value="0" style="width:100%; padding:12px; background:#ffffff; color:#1E4E8C; border:1px solid rgba(255,255,255,0.5); border-radius:10px; margin-bottom:18px; font-weight:600; font-size:14px;">' +
+    '<div id="stock-error" style="color:#FFD5C0; font-size:13px; min-height:18px; margin-bottom:14px;"></div>' +
+    '<div style="display:flex; gap:10px;">' +
+      '<button id="stock-cancel" style="flex:1; padding:12px; background:rgba(255,255,255,0.15); color:#ffffff; border:1px solid rgba(255,255,255,0.4); border-radius:10px; font-weight:700; cursor:pointer;">Cancel</button>' +
+      '<button id="stock-submit" style="flex:2; padding:12px; background:#ffffff; color:#1E4E8C; border:none; border-radius:10px; font-weight:700; cursor:pointer;">Save</button>' +
     '</div>' +
-    '<label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;" id="qty-label">New stock level</label>' +
-    '<input id="stock-qty" type="number" min="0" value="0" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-size:14px; margin-bottom:18px;">' +
-    '<div id="stock-error" style="color:#C4432B; font-size:13px; min-height:18px; margin-bottom:14px;"></div>' +
-    '<div style="display:flex; gap:10px;"><button id="stock-cancel" class="filter-btn" style="flex:1; padding:12px;">Cancel</button><button id="stock-submit" class="filter-btn active" style="flex:2; padding:12px;">Save</button></div>' +
-    '</div>';
-
+  '</div>';
   document.body.appendChild(overlay);
-
-  let mode = 'set';
-  const setBtn = overlay.querySelector('#mode-set');
-  const receiveBtn = overlay.querySelector('#mode-receive');
-  const qtyLabel = overlay.querySelector('#qty-label');
-
-  setBtn.onclick = () => { mode = 'set'; setBtn.classList.add('active'); receiveBtn.classList.remove('active'); qtyLabel.textContent = 'New stock level'; };
-  receiveBtn.onclick = () => { mode = 'receive'; receiveBtn.classList.add('active'); setBtn.classList.remove('active'); qtyLabel.textContent = 'Quantity received'; };
-
   overlay.querySelector('#stock-cancel').onclick = () => overlay.remove();
-
   overlay.querySelector('#stock-submit').onclick = async () => {
-    const errorEl = overlay.querySelector('#stock-error');
-    errorEl.textContent = '';
-    const product_id = overlay.querySelector('#stock-product').value;
+    const errEl = overlay.querySelector('#stock-error');
+    errEl.textContent = '';
+    const pid = overlay.querySelector('#stock-product').value;
     const qty = parseInt(overlay.querySelector('#stock-qty').value);
-
-    if (isNaN(qty) || qty < 0){ errorEl.textContent = '❌ Enter a valid number.'; return; }
-
+    if (isNaN(qty) || qty < 0){ errEl.textContent = 'Enter a valid number.'; return; }
     try {
-      const res = mode === 'set' ? await API.updateStock(product_id, qty) : await API.receiveStock(product_id, qty);
-      const product = DATA.reorder_all.find(p => p.id === product_id);
-      if (product) product.current_stock = res.product.current_stock;
+      const res = await API.updateStock(pid, qty);
       overlay.remove();
-      alert('✅ ' + res.message);
+      alert(res.message);
+      renderedTabs.delete('overview');
       renderInventory();
-    } catch (err){
-      errorEl.textContent = '❌ ' + err.message;
-    }
+    } catch (err){ errEl.textContent = 'Error: ' + err.message; }
   };
 }
+
+/* SUPPLIERS */
+function renderSuppliers(){
+  const el = document.getElementById('view-suppliers');
+
+  const suppliers = [...(DATA.suppliers || [])].sort((a, b) => b.rating - a.rating);
+
+  el.innerHTML =
+    '<div class="panel">' +
+      '<h2>Supplier directory</h2>' +
+      '<p class="sub">' + suppliers.length + ' active suppliers across the network.</p>' +
+      '<div class="table-scroll" style="max-height:600px;">' +
+        '<table>' +
+          '<thead><tr><th>Supplier</th><th>City</th><th>Category</th><th class="num">Rating</th><th class="num">Lead</th><th>Status</th></tr></thead>' +
+          '<tbody>' +
+            suppliers.map(s =>
+              '<tr>' +
+                '<td class="name-cell">' + s.name + '</td>' +
+                '<td>' + s.city + '</td>' +
+                '<td>' + s.category + '</td>' +
+                '<td class="num">' + s.rating.toFixed(1) + '</td>' +
+                '<td class="num">' + s.lead_time + 'd</td>' +
+                '<td><span class="chip low">Active</span></td>' +
+              '</tr>'
+            ).join('') +
+          '</tbody>' +
+        '</table>' +
+      '</div>' +
+    '</div>';
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
