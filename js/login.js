@@ -201,10 +201,10 @@ function renderSidebarUser(){
   let displayName, subLabel, initials, avatarGradient;
 
   if (session.role === 'supplier'){
-    const supplier = DATA.suppliers.find(s => s.id === session.supplierId) || DATA.suppliers[0];
-    displayName = supplier.name;
-    subLabel = supplier.id + ' Â· ' + supplier.city;
-    initials = supplier.name.split(/\s+/).slice(0, 2).map(w => w[0].toUpperCase()).join('').slice(0, 2);
+    const supplier = DATA.suppliers.find(s => s.id === session.supplierId);
+    displayName = supplier ? supplier.name : ((session.user && session.user.name) || 'Supplier');
+    subLabel = supplier && supplier.city ? supplier.city : ((session.user && session.user.city) || 'Location not set');
+    initials = (supplier ? supplier.name : 'S').split(/\s+/).slice(0, 2).map(w => w[0].toUpperCase()).join('').slice(0, 2);
     avatarGradient = 'from-blue-500 to-cyan-500';
   } else if (session.role === 'vendor'){
     const vendorId = session.vendorId || 'â€”';
@@ -340,8 +340,9 @@ function bindSignupForm(){
       email: document.getElementById('signup-email').value.trim().toLowerCase(),
       password: document.getElementById('signup-password').value,
       role: selectedSignupRole,
-      city: selectedSignupRole === 'vendor' ? (document.getElementById('signup-city')?.value || null) : null,
-      type: selectedSignupRole === 'vendor' ? (document.getElementById('signup-type')?.value || null) : null
+      city: (selectedSignupRole === 'vendor' ? (document.getElementById('signup-city')?.value || null) : (document.getElementById('signup-supplier-city')?.value || null)),
+      type: selectedSignupRole === 'vendor' ? (document.getElementById('signup-type')?.value || null) : null,
+      type: selectedSignupRole === 'supplier' ? (document.getElementById('signup-category')?.value || null) : null
     };
 
     if (!payload.name || !payload.email || !payload.password){
@@ -495,7 +496,13 @@ async function handleLogin(){
     API.setToken(token);
 
     session.role = user.role;
-    session.supplierId = user.supplierId || null;
+     session.supplierId = user.supplierId || null;
+  if (session.role === 'supplier') {
+    resolveSupplierLabel(session.supplierId).then(name => {
+      const el = document.getElementById('session-role-label');
+      if (el) el.textContent = 'Signed in \u2014 ' + name;
+    });
+  }
     session.vendorId = user.vendorId || null;
     session.user = user;
 
@@ -561,9 +568,13 @@ function renderSessionBar(){
       '</select>';
   }
 
+  const isDemo = localStorage.getItem('ss_mode') === 'demo';
+  const roleText = session.role === 'supplier'
+    ? (isDemo ? 'Demo Supplier' : 'Supplier')
+    : labels[session.role];
   sessionBar.innerHTML =
-    '<span class="text-xs font-semibold px-3 py-2 rounded-lg" style="background:rgba(30,78,140,0.15); color:#2E6FBF; border:1px solid rgba(30,78,140,0.25);">Signed in â€” ' + labels[session.role] + '</span>' +
-    extra +
+    '<span id="session-role-label" class="text-xs font-semibold px-3 py-2 rounded-lg" style="background:rgba(30,78,140,0.15); color:#2E6FBF; border:1px solid rgba(30,78,140,0.25);">Signed in â€” ' + roleText + '</span>' +
+    (isDemo ? extra : '') +
     '<button id="logout-btn" type="button" class="text-xs font-semibold px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg transition-all">Sign out</button>';
 
   document.getElementById('logout-btn').onclick = (e) => {
@@ -706,3 +717,111 @@ function initGlobalSearch(){
 
 showLoginScreen();
 initGlobalSearch();
+
+/* ==================== SIGNUP SUPPLIER PICKER ==================== */
+async function loadSupplierOptions(){
+  const sel = document.getElementById('signup-supplier');
+  if (!sel) return;
+  try {
+    const list = await API.request('/suppliers/list');
+    sel.innerHTML = '<option value="">Create a new supplier</option>' +
+      list.map(s => `<option value="${s.id}">${s.name} — ${s.city || ''}</option>`).join('');
+  } catch (e) {
+    console.warn('Could not load supplier list', e);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const supplierBtn = document.querySelector('.role-btn[data-role="supplier"]');
+  const vendorBtn   = document.querySelector('.role-btn[data-role="vendor"]');
+  const supField    = document.getElementById('signup-supplier-field');
+  const venField    = document.getElementById('signup-vendor-fields');
+  if (supplierBtn && supField){
+    supplierBtn.addEventListener('click', () => {
+      supField.classList.remove('hidden');
+      if (venField) venField.classList.add('hidden');
+      // category picker — no supplier list to load
+    });
+  }
+  if (vendorBtn && supField){
+    vendorBtn.addEventListener('click', () => {
+      supField.classList.add('hidden');
+      if (venField) venField.classList.remove('hidden');
+    });
+  }
+});
+
+/* ==================== SUPPLIER HEADER LABEL ==================== */
+async function resolveSupplierLabel(supplierId){
+  if (!supplierId) return 'Supplier';
+  const isDemo = localStorage.getItem('ss_mode') === 'demo';
+
+  // Try local DATA snapshot first (works offline + always for demo)
+  try {
+    if (typeof DATA !== 'undefined' && DATA.suppliers) {
+      const local = DATA.suppliers.find(s => s.id === supplierId);
+      if (local) return local.name;
+    }
+  } catch (e) {}
+
+  // Fall back to API
+  try {
+    const s = await API.request('/suppliers/' + supplierId + '/name');
+    return s.name || 'Supplier';
+  } catch (e) {
+    return 'Supplier';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const locField = document.getElementById('signup-location-fields');
+  if (!locField) return;
+  // Location field is shared for both vendor and supplier — always show
+  locField.classList.remove('hidden');
+});
+
+/* ==================== SUPPLIER DETAIL CHIP ==================== */
+async function renderSupplierChip(){
+  if (session.role !== 'supplier') return;
+  const chip = document.getElementById('supplier-detail-chip');
+  if (!chip) return;
+
+  const supplierId = session.supplierId;
+  if (!supplierId) { chip.textContent = ''; return; }
+
+  // Try local DATA first (works for demo suppliers offline)
+  let s = null;
+  try {
+    if (typeof DATA !== 'undefined' && DATA.suppliers) {
+      s = DATA.suppliers.find(x => x.id === supplierId);
+    }
+  } catch (e) {}
+
+  // Fall back to API for live suppliers
+  if (!s) {
+    try { s = await API.request('/suppliers/' + supplierId); }
+    catch (e) { return; }
+  }
+
+  if (!s) return;
+  const bits = [s.id, s.name, s.city, s.category].filter(Boolean);
+  chip.textContent = bits.join(' · ');
+}
+
+/* ==================== INJECT SUPPLIER CHIP INTO HEADER ==================== */
+function injectSupplierChip(){
+  const bar = document.getElementById('session-bar') || document.querySelector('.session-bar');
+  if (!bar) return;
+  if (document.getElementById('supplier-detail-chip')) return;
+  const chip = document.createElement('span');
+  chip.id = 'supplier-detail-chip';
+  chip.className = 'text-xs font-medium px-3 py-2 rounded-lg ml-1';
+  chip.style.cssText = 'background:#F5F0E1; color:#333; border:1px solid rgba(0,0,0,0.1);';
+  // Insert before sign-out button
+  const signoutBtn = document.getElementById('logout-btn');
+  if (signoutBtn) {
+    bar.insertBefore(chip, signoutBtn);
+  } else {
+    bar.appendChild(chip);
+  }
+}

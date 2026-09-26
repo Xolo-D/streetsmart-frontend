@@ -1,9 +1,25 @@
+/* ==================== SUPPLIER MODE HELPER ==================== */
+function isDemoSupplier(){
+  return localStorage.getItem('ss_mode') === 'demo';
+}
 ﻿// js/supplier-views.js
 
 /* ==================== HELPERS ==================== */
 
 function currentSupplier(){
-  return (DATA.suppliers || []).find(s => s.id === session.supplierId) || (DATA.suppliers || [])[0];
+  const fromDemo = (DATA.suppliers || []).find(s => s.id === session.supplierId);
+  if (fromDemo) return fromDemo;
+  return {
+    id: session.supplierId || '—',
+    name: (session.user && session.user.name) || 'Supplier',
+    city: (session.user && session.user.city) || '',
+    rating: 0,
+    lead_time: 0,
+    status: 'Active',
+    on_time: 0,
+    quality: 0,
+    category: (session.user && session.user.type) || ''
+  };
 }
 
 /* ==================== OVERVIEW ==================== */
