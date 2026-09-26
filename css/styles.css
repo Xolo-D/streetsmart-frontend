@@ -814,3 +814,10 @@ div[style*="position:fixed"][style*="inset:0"] > div > div[style*="background:#D
 div[style*="position:fixed"][style*="inset:0"] > div > div[style*="background:#F5F0E1"] *{
   color: #FFFFFF !important;
 }
+
+/* Flash animation when an admin KPI value changes */
+.kpi-flash { animation: kpiFlash 1.2s ease-out; }
+@keyframes kpiFlash {
+  0%   { background: #fff7d6; box-shadow: 0 0 0 3px #f5c542; }
+  100% { background: inherit; box-shadow: none; }
+}

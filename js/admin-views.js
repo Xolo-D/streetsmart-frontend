@@ -2,24 +2,52 @@
 
 /* ==================== ADMIN OVERVIEW ==================== */
 
-function renderAdminOverview(){
+async function renderAdminOverview(){
   const el = document.getElementById('view-adm-overview');
-  const k = DATA.kpis;
-  el.innerHTML = '<div class="hero"><div class="hero-figure"><div class="label">Network-wide revenue, ' + k.date_start + ' â€” ' + k.date_end + '</div><div class="num display"><span class="unit">R</span>' + (k.total_revenue/1000000).toFixed(2) + '<span class="unit" style="font-size:32px;color:var(--ink);margin-left:4px;">M</span></div></div><div class="hero-sub">' + k.num_vendors + ' vendor accounts and ' + DATA.suppliers.length + ' supplier accounts under management across ' + k.num_cities + ' cities.</div></div>'
-    + '<div class="kpi-row"><div class="kpi"><div class="v">' + k.num_vendors + '</div><div class="l">Vendor accounts</div></div><div class="kpi"><div class="v">' + DATA.suppliers.length + '</div><div class="l">Supplier accounts</div></div><div class="kpi"><div class="v">' + k.num_products + '</div><div class="l">Products in catalogue</div></div><div class="kpi"><div class="v">' + fmtNum(k.total_transactions) + '</div><div class="l">Transactions logged</div></div></div>'
-    + '<div class="grid grid-2" style="margin-top:24px;"><div class="panel"><h2>Vendor accounts by city</h2><p class="sub">Where the registered vendor base is concentrated.</p><div class="chart-wrap" style="height:280px;"><canvas id="chart-adm-vendorcity"></canvas></div></div><div class="panel"><h2>Vendor accounts by type</h2><p class="sub">Mix of stall types across the network.</p><div class="chart-wrap" style="height:280px;"><canvas id="chart-adm-vendortype"></canvas></div></div></div>';
+  const k  = DATA.kpis;
+
+  let live = null;
+  try { live = await API.request('/admin/stats'); }
+  catch (e) { console.warn('[admin] live stats unavailable, using cached data', e); }
+
+  const vendors      = live ? live.vendors      : k.num_vendors;
+  const suppliers    = live ? live.suppliers    : DATA.suppliers.length;
+  const products     = live ? live.products     : k.num_products;
+  const transactions = live ? live.transactions : k.total_transactions;
+  const revenue      = live ? live.revenue      : k.total_revenue;
+  const byCity       = live ? live.byCity       : DATA.vendors_by_city.map(c => ({ label: c.city,  value: c.count }));
+  const byType       = live ? live.byType       : DATA.vendors_by_type.map(t => ({ label: t.type, value: t.count }));
+
+  el.innerHTML =
+    '<div class="hero"><div class="hero-figure"><div class="label">Network-wide revenue, ' + k.date_start + ' — ' + k.date_end + '</div><div class="num display"><span class="unit">R</span>' + (revenue/1000000).toFixed(2) + '<span class="unit" style="font-size:32px;color:var(--ink);margin-left:4px;">M</span></div></div><div class="hero-sub"><span id="hero-vendors">' + vendors + '</span> vendor accounts and <span id="hero-suppliers">' + suppliers + '</span> supplier accounts under management across ' + byCity.length + ' cities.</div></div>'
+    + '<div class="kpi-row">'
+      + '<div class="kpi"><div class="v" id="kpi-vendors">'   + vendors      + '</div><div class="l">Vendor accounts</div></div>'
+      + '<div class="kpi"><div class="v" id="kpi-suppliers">' + suppliers    + '</div><div class="l">Supplier accounts</div></div>'
+      + '<div class="kpi"><div class="v" id="kpi-products">'  + products     + '</div><div class="l">Products in catalogue</div></div>'
+      + '<div class="kpi"><div class="v" id="kpi-tx">'        + fmtNum(transactions) + '</div><div class="l">Transactions logged</div></div>'
+    + '</div>'
+    + '<div class="grid grid-2" style="margin-top:24px;">'
+      + '<div class="panel"><h2>Vendor accounts by city</h2><p class="sub">Where the registered vendor base is concentrated.</p><div class="chart-wrap" style="height:280px;"><canvas id="chart-adm-vendorcity"></canvas></div></div>'
+      + '<div class="panel"><h2>Vendor accounts by type</h2><p class="sub">Mix of stall types across the network.</p><div class="chart-wrap" style="height:280px;"><canvas id="chart-adm-vendortype"></canvas></div></div>'
+    + '</div>';
+
+  const oldCity = Chart.getChart('chart-adm-vendorcity'); if (oldCity) oldCity.destroy();
+  const oldType = Chart.getChart('chart-adm-vendortype'); if (oldType) oldType.destroy();
 
   new Chart(document.getElementById('chart-adm-vendorcity'), {
-    type:'bar',
-    data:{ labels: DATA.vendors_by_city.map(c=>c.city), datasets:[{data: DATA.vendors_by_city.map(c=>c.count), backgroundColor: INDIGO, borderColor: INK, borderWidth:1}] },
-    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{color:LINE}}, y:{grid:{display:false}} } }
+    type: 'bar',
+    data: { labels: byCity.map(c => c.label), datasets: [{ data: byCity.map(c => c.value), backgroundColor: INDIGO, borderColor: INK, borderWidth: 1 }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: LINE } }, y: { grid: { display: false } } } }
   });
+
   const palette = Object.values(CAT_HEX);
   new Chart(document.getElementById('chart-adm-vendortype'), {
-    type:'doughnut',
-    data:{ labels: DATA.vendors_by_type.map(c=>c.type), datasets:[{data: DATA.vendors_by_type.map(c=>c.count), backgroundColor: DATA.vendors_by_type.map((c,i)=>palette[i%palette.length]), borderColor:'#FBF8EF', borderWidth:2}] },
-    options:{ responsive:true, maintainAspectRatio:false, cutout:'58%', plugins:{legend:{position:'bottom', labels:{boxWidth:10,padding:8,color:'#4A4A4A'}}} }
+    type: 'doughnut',
+    data: { labels: byType.map(t => t.label), datasets: [{ data: byType.map(t => t.value), backgroundColor: byType.map((_, i) => palette[i % palette.length]), borderColor: '#FBF8EF', borderWidth: 2 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '58%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 8, color: '#4A4A4A' } } } }
   });
+
+  startAdminStatsPolling();
 }
 
 /* ==================== ADMIN VENDORS ==================== */
@@ -451,4 +479,48 @@ async function openReviewModal(user){
       btn.textContent = 'Approve';
     }
   };
+}
+/* ==================== ADMIN LIVE STATS POLLING ==================== */
+
+let _adminStatsTimer = null;
+
+async function refreshAdminStats(){
+  const overviewEl = document.getElementById('view-adm-overview');
+  if (!overviewEl || !overviewEl.offsetParent) return;
+
+  try {
+    const s = await API.request('/admin/stats');
+
+    const setKpi = (id, val) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const next = String(val);
+      if (el.textContent !== next) {
+        el.textContent = next;
+        const card = el.closest('.kpi');
+        if (card) { card.classList.add('kpi-flash'); setTimeout(() => card.classList.remove('kpi-flash'), 1200); }
+      }
+    };
+
+    setKpi('kpi-vendors',   s.vendors);
+    setKpi('kpi-suppliers', s.suppliers);
+    setKpi('kpi-products',  s.products);
+    setKpi('kpi-tx',        fmtNum(s.transactions));
+
+    const hv = document.getElementById('hero-vendors');   if (hv) hv.textContent = s.vendors;
+    const hs = document.getElementById('hero-suppliers'); if (hs) hs.textContent = s.suppliers;
+
+    const badge = document.getElementById('pending-badge');
+    if (badge) { badge.textContent = s.pendingUsers; badge.style.display = s.pendingUsers > 0 ? 'inline-block' : 'none'; }
+  } catch (e) { /* silent */ }
+}
+
+function startAdminStatsPolling(ms = 10000){
+  if (_adminStatsTimer) return;
+  refreshAdminStats();
+  _adminStatsTimer = setInterval(refreshAdminStats, ms);
+}
+
+function stopAdminStatsPolling(){
+  if (_adminStatsTimer) { clearInterval(_adminStatsTimer); _adminStatsTimer = null; }
 }
