@@ -1,4 +1,34 @@
-﻿// js/admin-views.js
+// js/admin-views.js
+
+
+/* ==================== API CACHE HELPERS ==================== */
+let _adminVendorsCache = null;
+let _adminSuppliersCache = null;
+let _adminCitiesCache = null;
+let _adminCategoriesCache = null;
+
+async function fetchAdminVendors() {
+  if (!_adminVendorsCache) _adminVendorsCache = await API.request('/vendors');
+  return _adminVendorsCache;
+}
+async function fetchAdminSuppliers() {
+  if (!_adminSuppliersCache) _adminSuppliersCache = await API.request('/suppliers');
+  return _adminSuppliersCache;
+}
+async function fetchAdminCities() {
+  if (!_adminCitiesCache) { try { _adminCitiesCache = await API.request('/cities'); } catch(e){ _adminCitiesCache = []; } }
+  return _adminCitiesCache;
+}
+async function fetchAdminCategories() {
+  if (!_adminCategoriesCache) { try { _adminCategoriesCache = await API.request('/categories'); } catch(e){ _adminCategoriesCache = []; } }
+  return _adminCategoriesCache;
+}
+function clearAdminCache() {
+  _adminVendorsCache = null;
+  _adminSuppliersCache = null;
+  _adminCitiesCache = null;
+  _adminCategoriesCache = null;
+}
 
 /* ==================== ADMIN OVERVIEW ==================== */
 
@@ -54,18 +84,19 @@ async function renderAdminOverview(){
 
 let vendorSearch = '';
 
-function renderAdminVendors(){
+async function renderAdminVendors(){
   const el = document.getElementById('view-adm-vendors');
+  const vendors = await fetchAdminVendors();
   el.innerHTML =
     '<div class="panel">' +
       '<h2>Manage vendors</h2>' +
-      '<p class="sub">' + DATA.vendors.length + ' vendor accounts, ranked by revenue. Search by vendor ID or city.</p>' +
+      '<p class="sub">' + vendors.length + ' vendor accounts, ranked by revenue. Search by vendor ID or city.</p>' +
       '<div class="filter-row">' +
-        '<button id="add-vendor-btn" class="filter-btn active" style="background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;border:none;font-weight:700;padding:10px 20px;">âž• Add vendor</button>' +
-        '<input id="vendor-search" type="text" placeholder="Search vendor ID or cityâ€¦" class="filter-btn" style="cursor:text; min-width:220px; text-align:left;">' +
+        '<button id="add-vendor-btn" class="filter-btn active" style="background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;border:none;font-weight:700;padding:10px 20px;">+ Add vendor</button>' +
+        '<input id="vendor-search" type="text" placeholder="Search vendor ID or city..." class="filter-btn" style="cursor:text; min-width:220px; text-align:left;">' +
       '</div>' +
       '<div class="table-scroll">' +
-        '<table><thead><tr><th>Vendor</th><th>City</th><th>Type</th><th class="num">Revenue</th><th class="num">Transactions</th><th class="num">SKUs sold</th><th>Actions</th></tr></thead>' +
+        '<table><thead><tr><th>Vendor</th><th>City</th><th>Type</th><th class="num">Revenue</th><th class="num">Transactions</th><th class="num">Products sold</th><th>Actions</th></tr></thead>' +
         '<tbody id="adm-vendors-body"></tbody></table>' +
       '</div>' +
     '</div>';
@@ -77,11 +108,12 @@ function renderAdminVendors(){
   renderVendorRows();
 }
 
-function renderVendorRows(){
+async function renderVendorRows(){
   const body = document.getElementById('adm-vendors-body');
   if (!body) return;
+  const vendors = await fetchAdminVendors();
   const q = vendorSearch.trim().toLowerCase();
-  const filtered = DATA.vendors.filter(v => !q || v.id.toLowerCase().indexOf(q) !== -1 || v.city.toLowerCase().indexOf(q) !== -1);
+  const filtered = vendors.filter(v => !q || v.id.toLowerCase().indexOf(q) !== -1 || v.city.toLowerCase().indexOf(q) !== -1);
   const rows = filtered.slice(0, 100);
 
   body.innerHTML = rows.map(v =>
@@ -98,22 +130,34 @@ function renderVendorRows(){
       '</td>' +
     '</tr>'
   ).join('')
-  + (filtered.length > 100 ? '<tr><td colspan="7" class="sub-cell" style="padding:14px 10px;">Showing first 100 matches â€” refine your search.</td></tr>' : '');
+  + (filtered.length > 100 ? '<tr><td colspan="7" class="sub-cell" style="padding:14px 10px;">Showing first 100 of ' + filtered.length + ' matches</td></tr>' : '');
 
   body.querySelectorAll('.edit-vendor-btn').forEach(btn => {
     btn.onclick = () => openEditVendorModal(btn.dataset.id);
   });
   body.querySelectorAll('.delete-vendor-btn').forEach(btn => {
-    btn.onclick = () => deleteVendor(btn.dataset.id);
+    btn.onclick = () => openDeleteVendor(btn.dataset.id);
   });
 }
 
 function openAddVendorModal(){ showVendorModal(null); }
 
-function openEditVendorModal(id){
-  const vendor = DATA.vendors.find(v => v.id === id);
-  if (!vendor){ alert('âŒ Vendor not found'); return; }
+async function openEditVendorModal(id){
+  const vendors = await fetchAdminVendors();
+  const vendor = vendors.find(v => v.id === id);
   showVendorModal(vendor);
+}
+
+async function openDeleteVendor(id){
+  if (!confirm('Delete vendor ' + id + '? This cannot be undone.')) return;
+  try {
+    await API.deleteVendor(id);
+    clearAdminCache();
+    alert('Vendor ' + id + ' deleted');
+    renderAdminVendors();
+  } catch (err) {
+    alert('Delete failed: ' + err.message);
+  }
 }
 
 function showVendorModal(vendor){
@@ -147,7 +191,7 @@ function showVendorModal(vendor){
     '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:20px;">' +
       '<div><label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;">Units sold</label><input id="v-units" type="number" value="' + (vendor ? vendor.units : '') + '" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-size:14px;"></div>' +
       '<div><label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;">Transactions</label><input id="v-transactions" type="number" value="' + (vendor ? vendor.transactions : '') + '" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-size:14px;"></div>' +
-      '<div><label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;">SKUs sold</label><input id="v-products" type="number" value="' + (vendor ? vendor.products : '') + '" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-size:14px;"></div>' +
+      '<div><label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;">Products sold</label><input id="v-products" type="number" value="' + (vendor ? vendor.products : '') + '" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-size:14px;"></div>' +
     '</div>' +
     '<div id="v-error" style="color:#C4432B; font-size:13px; min-height:18px; margin-bottom:14px;"></div>' +
     '<div style="display:flex; gap:10px;"><button id="v-cancel" class="filter-btn" style="flex:1; padding:12px;">Cancel</button><button id="v-submit" class="filter-btn active" style="flex:2; padding:12px;">' + (isEdit ? 'Save changes' : 'Create vendor') + '</button></div>' +
@@ -184,7 +228,7 @@ function showVendorModal(vendor){
         alert('âœ… Vendor ' + vendor.id + ' updated');
       } else {
         const res = await API.addVendor(payload);
-        DATA.vendors.unshift(res.vendor);
+        clearAdminCache();
         alert('âœ… Vendor ' + payload.id + ' created');
       }
       overlay.remove();
@@ -202,7 +246,7 @@ async function deleteVendor(id){
 
   try {
     await API.deleteVendor(id);
-    DATA.vendors = DATA.vendors.filter(v => v.id !== id);
+    clearAdminCache();
     alert('âœ… Vendor ' + id + ' deleted');
     renderAdminVendors();
   } catch (err){
@@ -212,27 +256,37 @@ async function deleteVendor(id){
 
 /* ==================== ADMIN SUPPLIERS ==================== */
 
-function renderAdminSuppliers(){
+async function renderAdminSuppliers(){
   const el = document.getElementById('view-adm-suppliers');
-  el.innerHTML = '<div class="panel"><h2>Manage suppliers</h2><p class="sub">' + DATA.suppliers.length + ' active suppliers across the network.</p><div class="table-scroll" style="max-height:460px;"><table><thead><tr><th>Supplier</th><th>City</th><th>Category</th><th class="num">Rating</th><th class="num">On-time %</th><th>Status</th></tr></thead><tbody>'
-    + DATA.suppliers.map(s => '<tr><td class="name-cell">' + s.name + '</td><td>' + s.city + '</td><td>' + s.category + '</td><td class="num">' + s.rating.toFixed(1) + '</td><td class="num">' + s.on_time + '%</td><td><span class="chip ' + (s.status==='Preferred'?'low':s.status==='Reliable'?'medium':'soon') + '">' + s.status + '</span></td></tr>').join('')
-    + '</tbody></table></div></div>';
+  const suppliers = await fetchAdminSuppliers();
+  el.innerHTML =
+    '<div class="panel">' +
+      '<h2>Manage suppliers</h2>' +
+      '<p class="sub">' + suppliers.length + ' active suppliers across the network.</p>' +
+      '<div class="table-scroll" style="max-height:460px;">' +
+        '<table><thead><tr><th>Supplier</th><th>City</th><th>Category</th><th class="num">Rating</th><th class="num">On-time %</th><th>Status</th></tr></thead><tbody>' +
+        suppliers.map(s => '<tr><td class="name-cell">' + s.name + '</td><td>' + s.city + '</td><td>' + s.category + '</td><td class="num">' + (s.rating || 0).toFixed(1) + '</td><td class="num">' + (s.on_time || 0) + '%</td><td><span class="chip ' + (s.status==='Preferred'?'low':s.status==='Reliable'?'medium':'soon') + '">' + s.status + '</span></td></tr>').join('') +
+        '</tbody></table>' +
+      '</div>' +
+    '</div>';
 }
 
-/* ==================== ADMIN SYSTEM DATA ==================== */
-
-function renderAdminData(){
+async function renderAdminData(){
   const el = document.getElementById('view-adm-data');
   const allProducts = DATA.reorder_all || [];
+  const suppliers = await fetchAdminSuppliers();
+  const vendors = await fetchAdminVendors();
+  const cities = await fetchAdminCities();
+  const categories = await fetchAdminCategories();
 
   el.innerHTML =
     '<div class="panel">' +
       '<h2>System data</h2>' +
       '<p class="sub">The datasets currently powering StreetSmart. Click any tab to explore.</p>' +
       '<div class="filter-row">' +
-        '<button id="data-tab-cities" class="filter-btn active">Cities (' + (DATA.cities || []).length + ')</button>' +
-        '<button id="data-tab-categories" class="filter-btn">Categories (' + (DATA.categories || []).length + ')</button>' +
-        '<button id="data-tab-suppliers" class="filter-btn">Suppliers (' + DATA.suppliers.length + ')</button>' +
+        '<button id="data-tab-cities" class="filter-btn active">Cities (' + cities.length + ')</button>' +
+        '<button id="data-tab-categories" class="filter-btn">Categories (' + categories.length + ')</button>' +
+        '<button id="data-tab-suppliers" class="filter-btn">Suppliers (' + suppliers.length + ')</button>' +
       '</div>' +
       '<div id="data-content"></div>' +
     '</div>';
@@ -244,25 +298,25 @@ function renderAdminData(){
 
     if (activeTab === 'cities'){
       content.innerHTML = '<table><thead><tr><th>City</th><th class="num">Vendors</th><th class="num">Revenue</th></tr></thead><tbody>' +
-        (DATA.cities || []).map(c => {
-          const vendorCount = (DATA.vendors || []).filter(v => v.city === c.city).length;
+        cities.map(c => {
+          const vendorCount = vendors.filter(v => v.city === c.city).length;
           return '<tr><td class="name-cell">' + c.city + '</td><td class="num">' + vendorCount + '</td><td class="num">' + fmtR(c.revenue || 0) + '</td></tr>';
         }).join('') +
         '</tbody></table>';
     }
 
     if (activeTab === 'categories'){
-      content.innerHTML = '<table><thead><tr><th>Category</th><th class="num">Products</th><th class="num">Revenue</th></tr></thead><tbody>' +
-        (DATA.categories || []).map(c => {
-          const productCount = allProducts.filter(p => p.category === c.category).length;
-          return '<tr><td class="name-cell"><span class="swatch" style="background:' + (CAT_HEX[c.category] || '#999') + '"></span> ' + c.category + '</td><td class="num">' + productCount + '</td><td class="num">' + fmtR(c.revenue || 0) + '</td></tr>';
+      content.innerHTML = '<table><thead><tr><th>Category</th><th class="num">Products</th></tr></thead><tbody>' +
+        categories.map(c => {
+          const productCount = allProducts.filter(p => p.category === (c.category || c.name)).length;
+          return '<tr><td class="name-cell"><span class="swatch" style="background:' + (CAT_HEX[c.category || c.name] || '#999') + '"></span> ' + (c.category || c.name) + '</td><td class="num">' + productCount + '</td></tr>';
         }).join('') +
         '</tbody></table>';
     }
 
     if (activeTab === 'suppliers'){
       content.innerHTML = '<table><thead><tr><th>Supplier</th><th>City</th><th class="num">Lead time</th><th>Status</th></tr></thead><tbody>' +
-        DATA.suppliers.map(s => '<tr><td class="name-cell">' + s.name + '</td><td>' + s.city + '</td><td class="num">' + s.lead_time + 'd</td><td><span class="chip ' + (s.status==='Preferred'?'low':s.status==='Reliable'?'medium':'soon') + '">' + s.status + '</span></td></tr>').join('') +
+        suppliers.map(s => '<tr><td class="name-cell">' + s.name + '</td><td>' + s.city + '</td><td class="num">' + s.lead_time + 'd</td><td><span class="chip ' + (s.status==='Preferred'?'low':s.status==='Reliable'?'medium':'soon') + '">' + s.status + '</span></td></tr>').join('') +
         '</tbody></table>';
     }
   }
@@ -282,13 +336,12 @@ function renderAdminData(){
   renderTab();
 }
 
-/* ==================== ADMIN REPORTS ==================== */
-
-function renderAdminReports(){
+async function renderAdminReports(){
+  const _reportsVendors = await fetchAdminVendors();
   const el = document.getElementById('view-adm-reports');
   el.innerHTML = '<div class="grid grid-2"><div class="panel"><h2>Revenue by month, network-wide</h2><p class="sub">All vendors, all cities.</p><div class="chart-wrap" style="height:280px;"><canvas id="chart-rep-monthly"></canvas></div></div><div class="panel"><h2>Revenue by category</h2><p class="sub">Full catalogue performance.</p><div class="chart-wrap" style="height:280px;"><canvas id="chart-rep-category"></canvas></div></div></div>'
     + '<div class="panel"><h2>Top 10 vendors by revenue</h2><p class="sub">Highest-performing accounts network-wide.</p><table><thead><tr><th>Vendor</th><th>City</th><th class="num">Revenue</th><th class="num">Transactions</th></tr></thead><tbody>'
-    + DATA.vendors.slice(0,10).map(v => '<tr><td class="name-cell">' + v.id + '</td><td>' + v.city + '</td><td class="num">' + fmtR(v.revenue) + '</td><td class="num">' + v.transactions + '</td></tr>').join('')
+    + _reportsVendors.slice(0,10).map(v => '<tr><td class="name-cell">' + v.id + '</td><td>' + v.city + '</td><td class="num">' + fmtR(v.revenue) + '</td><td class="num">' + v.transactions + '</td></tr>').join('')
     + '</tbody></table></div>'
     + '<div class="filter-row" style="margin-top:22px;">'
     +   '<button id="adm-export-pdf" class="filter-btn active" style="background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;border:none;font-weight:700;padding:10px 20px;">ðŸ“„ Download PDF report</button>'

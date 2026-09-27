@@ -1,4 +1,4 @@
-﻿// js/vendor-views.js
+// js/vendor-views.js
 
 function marketAvgForCategory(category){
   const items = (DATA.reorder_all || []).filter(p => p.category === category);
@@ -233,78 +233,265 @@ async function renderPredictions(){
 
   let products = [];
   let discounts = [];
-  try {
-    products = await API.myProducts();
-  } catch (e){
-    el.innerHTML = '<div class="panel"><h2>Could not load products</h2></div>';
-    return;
-  }
-  try {
-    discounts = await API.discounts();
-  } catch (e){
-    discounts = [];
-  }
+  try { products = await API.myProducts(); }
+  catch (e) { el.innerHTML = '<div class="panel"><h2>Could not load products</h2></div>'; return; }
+  try { discounts = await API.discounts(); } catch (e) { discounts = []; }
 
-  if (!products || products.length === 0){
+  if (!products || products.length === 0) {
     el.innerHTML = '<div class="panel"><h2>No products yet</h2></div>';
     return;
   }
 
-  products.sort((a, b) => (b.predicted_daily_demand || 0) - (a.predicted_daily_demand || 0));
-
-  // Discount lookup
   const discountMap = {};
   discounts.forEach(d => { discountMap[d.product_id] = d; });
-
   const discountedProducts = products.filter(p => discountMap[p.id]);
-  const discountHtml = discountedProducts.length > 0
-    ? '<div class="panel" style="background:linear-gradient(135deg,#FEF3C7,#FFFBEB); border:1.5px solid #D89A2E;">' +
-        '<div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">' +
-          '<div style="font-size:28px;">🔥</div>' +
-          '<div><h2 style="margin:0; color:#7A5610;">Special offers for you</h2>' +
-          '<p class="sub" style="margin:4px 0 0;">' + discountedProducts.length + ' supplier discount' + (discountedProducts.length > 1 ? 's' : '') + ' available now</p></div>' +
-        '</div>' +
-        '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:14px;">' +
-          discountedProducts.map(p => {
-            const d = discountMap[p.id];
-            const discounted = p.unit_price * (1 - d.discount_percent / 100);
-            const savingsPerUnit = p.unit_price - discounted;
-            const suggestedQty = Math.max(d.min_quantity, Math.ceil((p.predicted_daily_demand || 5) * 5));
-            const totalSavings = savingsPerUnit * suggestedQty;
-            return '<div style="background:white; border:1px solid rgba(216,154,46,0.35); border-radius:14px; padding:16px;">' +
-              '<div style="display:flex; justify-content:space-between; margin-bottom:10px;">' +
-                '<div><div style="font-weight:700; font-size:15px;">' + p.name + '</div>' +
-                '<div style="font-size:11.5px; color:#6B6B6B; margin-top:2px;">' + p.category + '</div></div>' +
-                '<div style="text-align:right;"><div style="font-weight:700; font-size:22px; color:#C4432B; line-height:1;">' + d.discount_percent + '%</div>' +
-                '<div style="font-size:10px; color:#7A5610;">off</div></div>' +
-              '</div>' +
-              '<div style="display:flex; align-items:baseline; gap:10px; padding:10px; background:rgba(216,154,46,0.1); border-radius:8px; margin-bottom:10px;">' +
-                '<div style="font-weight:700; font-size:18px; color:#4C6B3F;">' + fmtR(discounted) + '</div>' +
-                '<div style="font-size:12px; color:#6B6B6B; text-decoration:line-through;">' + fmtR(p.unit_price) + '</div>' +
-              '</div>' +
-              '<div style="font-size:12px; color:#4A4A4A; margin-bottom:8px;">📦 Order <strong>' + d.min_quantity + '+ units</strong> to qualify</div>' +
-              '<div style="padding:8px 12px; background:rgba(76,107,63,0.1); border-radius:8px; font-size:12px; color:#2F4A26;">💰 Estimated savings: <strong>' + fmtR(totalSavings) + '</strong></div>' +
-            '</div>';
-          }).join('') +
-        '</div>' +
-      '</div>'
-    : '';
 
-  el.innerHTML = discountHtml +
+  let myVendor = (session && session.vendorId)
+    ? (DATA.vendors || []).find(x => x.id === session.vendorId)
+    : null;
+  if (!myVendor) { try { myVendor = await API.request('/vendors/me'); } catch (e) {} }
+  const myCity = myVendor ? myVendor.city : 'Durban';
+
+  el.innerHTML =
+    '<div class="weather-hero" id="wx-hero" data-condition="Sunny">' +
+      '<div style="display:flex; align-items:center; justify-content:space-between; gap:20px;">' +
+        '<div>' +
+          '<div class="wh-city">📍 ' + myCity + '</div>' +
+          '<div class="wh-cond" id="wx-cond">Loading weather…</div>' +
+          '<div class="wh-desc" id="wx-desc"></div>' +
+        '</div>' +
+        '<div style="text-align:right;">' +
+          '<div class="wh-icon" id="wx-icon">☀️</div>' +
+          '<div class="wh-temp" id="wx-temp">—</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    (discountedProducts.length > 0 ? renderDiscountsPanel(discountedProducts, discountMap) : '') +
     '<div class="panel">' +
-      '<h2>What to stock tomorrow</h2>' +
-      '<p class="sub">Based on your own products. Click <strong>Predict</strong> for a live ML prediction.</p>' +
-      '<div class="table-scroll" style="max-height:520px;"><table><thead><tr><th>Product</th><th>Category</th><th class="num">Expected/day</th><th class="num">You have</th><th>Offer</th><th></th></tr></thead><tbody>' +
-      products.map(p => {
-        const d = discountMap[p.id];
-        const offerHtml = d ? '<span class="chip low">🔥 ' + d.discount_percent + '% off</span>' : '<span style="color:#6B6B6B;">—</span>';
-        return '<tr><td class="name-cell">' + p.name + '</td><td>' + p.category + '</td><td class="num">' + Math.round(p.predicted_daily_demand || 0) + '</td><td class="num">' + p.current_stock + '</td><td>' + offerHtml + '</td><td><button class="filter-btn predict-btn" data-pid="' + p.id + '" style="padding:6px 14px; font-size:12px; background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border:none; font-weight:700;">🔮 Predict</button></td></tr>';
-      }).join('') +
-      '</tbody></table></div>' +
+      '<h2>What to stock</h2>' +
+      '<p class="sub">Based on your own sales, live weather, and SA calendar. Recommendations only — you decide.</p>' +
+      '<div class="horizon-tabs" id="hz-tabs">' +
+        '<div class="indicator" id="hz-ind"></div>' +
+        '<button data-days="1" class="active">Tomorrow</button>' +
+        '<button data-days="3">3 days</button>' +
+        '<button data-days="5">5 days</button>' +
+      '</div>' +
+      '<div id="hz-results"><p class="sub">Loading predictions…</p></div>' +
     '</div>';
 
-  el.querySelectorAll('.predict-btn').forEach(btn => {
-    btn.onclick = (e) => { e.preventDefault(); openPredictModal(btn.dataset.pid, products); };
+  try {
+    const wx = await API.request('/weather/' + encodeURIComponent(myCity));
+    // Backend returns { city, weather, temperature, description }
+    const cond = wx.weather || wx.condition || 'Sunny';
+    const temp = (wx.temperature != null) ? wx.temperature : wx.temp;
+    document.getElementById('wx-cond').textContent = cond;
+    document.getElementById('wx-temp').textContent = (temp != null ? temp : '—') + '°C';
+    document.getElementById('wx-desc').textContent = wx.description || '';
+    document.getElementById('wx-hero').dataset.condition = cond;
+    document.getElementById('wx-icon').textContent =
+      cond === 'Rainy' ? '🌧️' :
+      cond === 'Cloudy' ? '⛅' : '☀️';
+  } catch (e) {
+    document.getElementById('wx-cond').textContent = 'Weather unavailable';
+  }
+
+  const tabs = document.querySelectorAll('#hz-tabs button');
+  const indicator = document.getElementById('hz-ind');
+  function moveIndicator() {
+    const active = document.querySelector('#hz-tabs button.active');
+    if (!active || !indicator) return;
+    const parentRect = active.parentElement.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    indicator.style.left  = (activeRect.left - parentRect.left) + 'px';
+    indicator.style.width = activeRect.width + 'px';
+  }
+  setTimeout(moveIndicator, 30);
+  window.addEventListener('resize', moveIndicator);
+
+  async function loadHorizon(days) {
+    const resultsEl = document.getElementById('hz-results');
+
+    // Skeleton placeholders while loading
+    resultsEl.innerHTML = '<div class="prediction-day">' +
+      '<div class="skeleton-day-head"></div>' +
+      '<div class="skeleton-card"><div style="flex:1"><div class="skeleton-line" style="width:40%"></div><div class="skeleton-line sm" style="width:25%"></div></div><div class="skeleton-block"></div></div>' +
+      '<div class="skeleton-card"><div style="flex:1"><div class="skeleton-line" style="width:50%"></div><div class="skeleton-line sm" style="width:30%"></div></div><div class="skeleton-block"></div></div>' +
+      '<div class="skeleton-card"><div style="flex:1"><div class="skeleton-line" style="width:35%"></div><div class="skeleton-line sm" style="width:20%"></div></div><div class="skeleton-block"></div></div>' +
+    '</div>';
+
+    const ids = products.map(p => p.id);
+    const startedAt = Date.now();
+
+    try {
+      const data = await API.request('/predict/horizon', {
+        method: 'POST',
+        body: JSON.stringify({ product_ids: ids, days })
+      });
+
+      renderHorizonResults(resultsEl, data, discountMap);
+
+      // Fade-in animation
+      resultsEl.classList.add('fade-in');
+
+      // Updated badge near the heading
+      const heading = document.querySelector('#view-predictions h2');
+      if (heading) {
+        const old = document.querySelector('.updated-badge');
+        if (old) old.remove();
+        const badge = document.createElement('span');
+        badge.className = 'updated-badge';
+        const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+        badge.innerHTML = '<span class="dot"></span>Updated ' + seconds + 's ago';
+        heading.parentNode.insertBefore(badge, heading.nextSibling);
+      }
+    } catch (e) {
+      resultsEl.innerHTML = '<div class="prediction-empty">Could not load predictions: ' + e.message + '</div>';
+    }
+  }
+
+  tabs.forEach(btn => {
+    btn.onclick = () => {
+      tabs.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      moveIndicator();
+      loadHorizon(parseInt(btn.dataset.days, 10));
+    };
+  });
+
+  loadHorizon(1);
+}
+
+function renderDiscountsPanel(discountedProducts, discountMap) {
+  return '<div class="panel" style="background:linear-gradient(135deg,#FEF3C7,#FFFBEB); border:1.5px solid #D89A2E;">' +
+    '<div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">' +
+      '<div style="font-size:28px;">🔥</div>' +
+      '<div><h2 style="margin:0; color:#7A5610;">Special offers for you</h2>' +
+      '<p class="sub" style="margin:4px 0 0;">' + discountedProducts.length + ' supplier discount' + (discountedProducts.length > 1 ? 's' : '') + ' available now</p></div>' +
+    '</div>' +
+    '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:14px;">' +
+      discountedProducts.map(p => {
+        const d = discountMap[p.id];
+        const discounted = p.unit_price * (1 - d.discount_percent / 100);
+        const savingsPerUnit = p.unit_price - discounted;
+        const suggestedQty = Math.max(d.min_quantity, Math.ceil((p.predicted_daily_demand || 5) * 5));
+        const totalSavings = savingsPerUnit * suggestedQty;
+        return '<div style="background:white; border:1px solid rgba(216,154,46,0.35); border-radius:14px; padding:16px;">' +
+          '<div style="display:flex; justify-content:space-between; margin-bottom:10px;">' +
+            '<div><div style="font-weight:700; font-size:15px;">' + p.name + '</div>' +
+            '<div style="font-size:11.5px; color:#6B6B6B; margin-top:2px;">' + p.category + '</div></div>' +
+            '<div style="text-align:right;"><div style="font-weight:700; font-size:22px; color:#C4432B; line-height:1;">' + d.discount_percent + '%</div>' +
+            '<div style="font-size:10px; color:#7A5610;">off</div></div>' +
+          '</div>' +
+          '<div style="display:flex; align-items:baseline; gap:10px; padding:10px; background:rgba(216,154,46,0.1); border-radius:8px; margin-bottom:10px;">' +
+            '<div style="font-weight:700; font-size:18px; color:#4C6B3F;">' + fmtR(discounted) + '</div>' +
+            '<div style="font-size:12px; color:#6B6B6B; text-decoration:line-through;">' + fmtR(p.unit_price) + '</div>' +
+          '</div>' +
+          '<div style="font-size:12px; color:#4A4A4A; margin-bottom:8px;">📦 Order <strong>' + d.min_quantity + '+ units</strong> to qualify</div>' +
+          '<div style="padding:8px 12px; background:rgba(76,107,63,0.1); border-radius:8px; font-size:12px; color:#2F4A26;">💰 Estimated savings: <strong>' + fmtR(totalSavings) + '</strong></div>' +
+        '</div>';
+      }).join('') +
+    '</div>' +
+  '</div>';
+}
+
+function renderHorizonResults(el, data, discountMap) {
+  discountMap = discountMap || {};
+  const { results } = data;
+  if (!results || results.length === 0) {
+    el.innerHTML = '<div class="prediction-empty"><div class="icon">📦</div>No predictions available.</div>';
+    return;
+  }
+
+  const byDate = {};
+  for (const r of results) {
+    if (!byDate[r.date]) byDate[r.date] = [];
+    byDate[r.date].push(r);
+  }
+
+  const days = Object.keys(byDate).sort();
+  el.innerHTML = days.map(date => {
+    const rows = byDate[date];
+    const first = rows[0];
+    const wxIcon = first.weather === 'Rainy' ? '🌧️' : first.weather === 'Cloudy' ? '⛅' : '☀️';
+    const holidayChip = first.is_holiday ? '<span class="factor-chip holiday">🎉 ' + first.is_holiday + '</span>' : '';
+    const cards = rows.map(r => {
+      const wxClass = r.weather === 'Rainy' ? 'wx-rainy' : r.weather === 'Cloudy' ? 'wx-cloudy' : 'wx-sunny';
+      const trendChip = r.trend_pct === 0
+        ? '<span class="factor-chip steady">📊 steady sales</span>'
+        : r.trend_pct > 0
+          ? '<span class="factor-chip trend-up">📈 +' + r.trend_pct + '% trend</span>'
+          : '<span class="factor-chip trend-down">📉 ' + r.trend_pct + '% trend</span>';
+      const weekendChip = r.is_weekend ? '<span class="factor-chip weekend">📅 weekend</span>' : '';
+      const holidayChip2 = r.is_holiday ? '<span class="factor-chip holiday">🎉 ' + r.is_holiday + '</span>' : '';
+      const units = Math.round(r.predicted_demand);
+
+      // ---- Product-specific info ----
+      const stock = r.current_stock || 0;
+      const demand = r.predicted_demand || 0;
+      const daysCovered = demand > 0 ? (stock / demand) : 999;
+      let stockChip, advice;
+      if (daysCovered < 1) {
+        stockChip = '<span class="factor-chip" style="background:#FFCDD2;color:#B71C1C;">🚨 Critical stock</span>';
+        advice = '⚠️ Stock is running low — only ' + stock + ' left. Order at least ' + Math.ceil(demand * 3) + ' units urgently.';
+      } else if (daysCovered < 3) {
+        stockChip = '<span class="factor-chip" style="background:#FFE0B2;color:#BF360C;">⚠️ Low stock</span>';
+        advice = 'You have ' + stock + ' in stock — about ' + daysCovered.toFixed(1) + ' days of cover. Recommended order: ~' + Math.ceil(demand * 2) + ' units.';
+      } else if (daysCovered < 7) {
+        stockChip = '<span class="factor-chip" style="background:#FFF3C4;color:#8A6D00;">📦 Moderate stock</span>';
+        advice = 'You have ' + stock + ' in stock — enough for ~' + daysCovered.toFixed(0) + ' days. Consider topping up soon.';
+      } else {
+        stockChip = '<span class="factor-chip" style="background:#C8E6C9;color:#2E7D32;">📦 Stock OK</span>';
+        advice = 'You have ' + stock + ' in stock — plenty for current demand.';
+      }
+
+      // ---- Discount chip ----
+      const disc = discountMap[r.product_id];
+      const discChip = disc
+        ? '<span class="factor-chip" style="background:#FFE0B2;color:#BF360C;">🔥 ' + disc.discount_percent + '% off</span>'
+        : '';
+
+      return '<div class="prediction-card" data-pid="' + r.product_id + '">' +
+        '<div><div class="pc-name">' + r.product_name + '</div>' +
+        '<div class="pc-cat">' + r.category + '</div></div>' +
+        '<div><div class="pc-units">' + units + '</div>' +
+        '<div class="pc-units-label">units</div></div>' +
+        '<button class="pc-predict-btn" type="button">🔮 Predict</button>' +
+        '<div class="pc-reasoning">' +
+          '<div class="pc-sentence">' + r.sentence + '</div>' +
+          '<div class="pc-sentence" style="margin-top:8px;color:#1E4E8C;">' + advice + '</div>' +
+          '<div class="pc-chips">' +
+            '<span class="factor-chip ' + wxClass + '">' + wxIcon + ' ' + r.weather + '</span>' +
+            trendChip + weekendChip + holidayChip2 +
+            '<span class="factor-chip season">🍃 ' + r.season + '</span>' +
+            stockChip + discChip +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="prediction-day">' +
+      '<div class="day-head">📅 ' + first.day_label +
+      '<span class="day-wx">' + wxIcon + ' ' + first.weather + ' · ' + first.temp + '°C</span>' +
+      holidayChip +
+      '</div>' +
+      cards +
+    '</div>';
+  }).join('');
+
+  el.querySelectorAll('.pc-predict-btn').forEach(btn => {
+    btn.onclick = (e) => {
+      e.preventDefault();
+      const card = btn.closest('.prediction-card');
+      if (!card) return;
+      const isExpanded = card.classList.contains('expanded');
+      if (isExpanded) {
+        card.classList.remove('expanded');
+        btn.textContent = '🔮 Predict';
+      } else {
+        card.classList.add('expanded');
+        btn.textContent = '✕ Hide reasoning';
+      }
+    };
   });
 }
 

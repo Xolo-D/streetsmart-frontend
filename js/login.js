@@ -1,4 +1,4 @@
-﻿// js/login.js
+// js/login.js
 
 /* ============================================================
    ROLE TABS
@@ -207,13 +207,13 @@ function renderSidebarUser(){
     initials = (supplier ? supplier.name : 'S').split(/\s+/).slice(0, 2).map(w => w[0].toUpperCase()).join('').slice(0, 2);
     avatarGradient = 'from-blue-500 to-cyan-500';
   } else if (session.role === 'vendor'){
-    const vendorId = session.vendorId || 'â€”';
+    const vendorId = session.vendorId || '—';
     const vendor = (typeof DATA !== 'undefined' && DATA.vendors)
       ? DATA.vendors.find(v => v.id === vendorId)
       : null;
-    displayName = vendor ? (vendor.id + ' Â· ' + vendor.city) : (session.user.name || 'New Vendor');
+    displayName = vendor ? (vendor.id + ' · ' + vendor.city) : (session.user.name || 'New Vendor');
     subLabel = session.user.email || 'vendor@streetsmart.co.za';
-    initials = vendorId === 'â€”' ? 'NV' : vendorId.replace('V', '').slice(-2);
+    initials = vendorId === '—' ? 'NV' : vendorId.replace('V', '').slice(-2);
     avatarGradient = 'from-cyan-500 to-blue-600';
   } else {
     displayName = session.user.name || 'System Administrator';
@@ -357,16 +357,16 @@ function bindSignupForm(){
     const btn = document.getElementById('signup-submit');
     const origText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = 'Creatingâ€¦';
+    btn.textContent = 'Creating…';
 
     try {
       await API.register(payload);
-      okEl.textContent = 'âœ“ Account created! An administrator will approve it shortly. You can sign in once approved.';
+      okEl.textContent = '✓ Account created! An administrator will approve it shortly. You can sign in once approved.';
       okEl.classList.remove('hidden');
       signupForm.reset();
       setRoleButton('vendor');
     } catch (err){
-      errEl.textContent = 'âŒ ' + err.message;
+      errEl.textContent = '❌ ' + err.message;
     } finally {
       btn.disabled = false;
       btn.textContent = origText;
@@ -426,10 +426,10 @@ function bindForgotForm(){
       document.getElementById('forgot-code-display').textContent = res.code || '------';
       document.getElementById('forgot-step-1').classList.add('hidden');
       document.getElementById('forgot-step-2').classList.remove('hidden');
-      okEl.textContent = 'âœ“ Code generated. See the demo code above.';
+      okEl.textContent = '✓ Code generated. See the demo code above.';
       okEl.classList.remove('hidden');
     } catch (err){
-      errEl.textContent = 'âŒ ' + err.message;
+      errEl.textContent = '❌ ' + err.message;
     }
   };
 
@@ -447,13 +447,13 @@ function bindForgotForm(){
 
     try {
       await API.resetPassword(email, code, newPassword);
-      okEl.textContent = 'âœ“ Password updated! Redirecting to sign inâ€¦';
+      okEl.textContent = '✓ Password updated! Redirecting to sign in…';
       okEl.classList.remove('hidden');
       setTimeout(() => {
         document.getElementById('forgot-back').click();
       }, 1500);
     } catch (err){
-      errEl.textContent = 'âŒ ' + err.message;
+      errEl.textContent = '❌ ' + err.message;
     }
   };
 }
@@ -488,12 +488,15 @@ async function handleLogin(){
   const originalHTML = btn ? btn.innerHTML : '';
   if (btn){
     btn.disabled = true;
-    btn.innerHTML = '<svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg><span>Verifyingâ€¦</span>';
+    btn.innerHTML = '<svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg><span>Verifying…</span>';
   }
 
   try {
     const { token, user } = await API.login(email, password);
     API.setToken(token);
+
+    // Clear admin caches on login so demo/live data never mixes
+    if (typeof clearAdminCache === 'function') clearAdminCache();
 
     session.role = user.role;
      session.supplierId = user.supplierId || null;
@@ -513,7 +516,7 @@ async function handleLogin(){
     showTab(ROLE_TABS[user.role][0].id);
     isLoggingIn = false;
   } catch (err){
-    errorEl.textContent = 'âŒ ' + (err.message || 'Login failed');
+    errorEl.textContent = '❌ ' + (err.message || 'Login failed');
     if (btn){
       btn.innerHTML = originalHTML;
       btn.disabled = false;
@@ -563,8 +566,8 @@ function renderSessionBar(){
   if (session.role === 'admin'){
     const topVendors = (DATA.vendors || []).slice(0, 30);
     extra = '<select id="vendor-switch" class="text-xs px-3 py-2 bg-slate-900 border border-slate-700 text-slate-200 rounded-lg cursor-pointer font-semibold">' +
-      '<option value="">â€” Preview a vendor â€”</option>' +
-      topVendors.map(v => '<option value="' + v.id + '"' + (v.id===session.vendorId?' selected':'') + '>' + v.id + ' Â· ' + v.city + '</option>').join('') +
+      '<option value="">— Preview a vendor —</option>' +
+      topVendors.map(v => '<option value="' + v.id + '"' + (v.id===session.vendorId?' selected':'') + '>' + v.id + ' · ' + v.city + '</option>').join('') +
       '</select>';
   }
 
@@ -573,7 +576,7 @@ function renderSessionBar(){
     ? (isDemo ? 'Demo Supplier' : 'Supplier')
     : labels[session.role];
   sessionBar.innerHTML =
-    '<span id="session-role-label" class="text-xs font-semibold px-3 py-2 rounded-lg" style="background:rgba(30,78,140,0.15); color:#2E6FBF; border:1px solid rgba(30,78,140,0.25);">Signed in â€” ' + roleText + '</span>' +
+    '<span id="session-role-label" class="text-xs font-semibold px-3 py-2 rounded-lg" style="background:rgba(30,78,140,0.15); color:#2E6FBF; border:1px solid rgba(30,78,140,0.25);">Signed in — ' + roleText + '</span>' +
     (isDemo ? extra : '') +
     '<button id="logout-btn" type="button" class="text-xs font-semibold px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg transition-all">Sign out</button>';
 
@@ -639,7 +642,7 @@ function initGlobalSearch(){
         '<div class="search-result-row" data-type="product" data-id="' + p.id + '" style="padding:10px 14px; cursor:pointer; border-bottom:1px solid rgba(0,0,0,0.04); display:flex; justify-content:space-between; align-items:center;">' +
           '<div>' +
             '<div style="font-weight:600; color:#000; font-size:13.5px;">' + p.name + '</div>' +
-            '<div style="font-size:11px; color:#6B6B6B; margin-top:2px;">' + p.category + ' · ' + p.id + '</div>' +
+            '<div style="font-size:11px; color:#6B6B6B; margin-top:2px;">' + p.category + ' � ' + p.id + '</div>' +
           '</div>' +
           '<div style="font-weight:600; color:#1E4E8C; font-size:13px;">' + fmtR(p.unit_price) + '</div>' +
         '</div>'
@@ -652,9 +655,9 @@ function initGlobalSearch(){
         '<div class="search-result-row" data-type="supplier" data-id="' + s.id + '" style="padding:10px 14px; cursor:pointer; border-bottom:1px solid rgba(0,0,0,0.04); display:flex; justify-content:space-between; align-items:center;">' +
           '<div>' +
             '<div style="font-weight:600; color:#000; font-size:13.5px;">' + s.name + '</div>' +
-            '<div style="font-size:11px; color:#6B6B6B; margin-top:2px;">' + s.city + ' · ' + s.category + '</div>' +
+            '<div style="font-size:11px; color:#6B6B6B; margin-top:2px;">' + s.city + ' � ' + s.category + '</div>' +
           '</div>' +
-          '<div style="font-weight:600; color:#D89A2E; font-size:12px;">★ ' + s.rating.toFixed(1) + '</div>' +
+          '<div style="font-weight:600; color:#D89A2E; font-size:12px;">? ' + s.rating.toFixed(1) + '</div>' +
         '</div>'
       ).join('');
     }
@@ -725,7 +728,7 @@ async function loadSupplierOptions(){
   try {
     const list = await API.request('/suppliers/list');
     sel.innerHTML = '<option value="">Create a new supplier</option>' +
-      list.map(s => `<option value="${s.id}">${s.name} — ${s.city || ''}</option>`).join('');
+      list.map(s => `<option value="${s.id}">${s.name} � ${s.city || ''}</option>`).join('');
   } catch (e) {
     console.warn('Could not load supplier list', e);
   }
@@ -736,19 +739,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const vendorBtn   = document.querySelector('.role-btn[data-role="vendor"]');
   const supField    = document.getElementById('signup-supplier-field');
   const venField    = document.getElementById('signup-vendor-fields');
-  if (supplierBtn && supField){
-    supplierBtn.addEventListener('click', () => {
-      supField.classList.remove('hidden');
-      if (venField) venField.classList.add('hidden');
-      // category picker — no supplier list to load
-    });
-  }
-  if (vendorBtn && supField){
-    vendorBtn.addEventListener('click', () => {
-      supField.classList.add('hidden');
+  const locField    = document.getElementById('signup-location-fields');
+
+  function applyRole(role) {
+    if (role === 'vendor') {
       if (venField) venField.classList.remove('hidden');
-    });
+      if (supField) supField.classList.add('hidden');
+      if (locField) locField.classList.add('hidden');
+    } else if (role === 'supplier') {
+      if (venField) venField.classList.add('hidden');
+      if (supField) supField.classList.remove('hidden');
+      if (locField) locField.classList.remove('hidden');
+    }
   }
+
+  if (supplierBtn) supplierBtn.addEventListener('click', () => applyRole('supplier'));
+  if (vendorBtn)   vendorBtn.addEventListener('click',   () => applyRole('vendor'));
+
+  applyRole('vendor');
 });
 
 /* ==================== SUPPLIER HEADER LABEL ==================== */
@@ -773,12 +781,6 @@ async function resolveSupplierLabel(supplierId){
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const locField = document.getElementById('signup-location-fields');
-  if (!locField) return;
-  // Location field is shared for both vendor and supplier — always show
-  locField.classList.remove('hidden');
-});
 
 /* ==================== SUPPLIER DETAIL CHIP ==================== */
 async function renderSupplierChip(){
@@ -805,7 +807,7 @@ async function renderSupplierChip(){
 
   if (!s) return;
   const bits = [s.id, s.name, s.city, s.category].filter(Boolean);
-  chip.textContent = bits.join(' · ');
+  chip.textContent = bits.join(' � ');
 }
 
 /* ==================== INJECT SUPPLIER CHIP INTO HEADER ==================== */

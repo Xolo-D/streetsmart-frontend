@@ -2,7 +2,7 @@
 function isDemoSupplier(){
   return localStorage.getItem('ss_mode') === 'demo';
 }
-﻿// js/supplier-views.js
+// js/supplier-views.js
 
 /* ==================== HELPERS ==================== */
 
@@ -10,15 +10,15 @@ function currentSupplier(){
   const fromDemo = (DATA.suppliers || []).find(s => s.id === session.supplierId);
   if (fromDemo) return fromDemo;
   return {
-    id: session.supplierId || '—',
+    id: session.supplierId || 'â€”',
     name: (session.user && session.user.name) || 'Supplier',
-    city: (session.user && session.user.city) || '',
+    city: (session.user && session.user.city) || 'Unknown',
     rating: 0,
-    lead_time: 0,
+    lead_time: 3,
     status: 'Active',
     on_time: 0,
     quality: 0,
-    category: (session.user && session.user.type) || ''
+    category: (session.user && session.user.type) || 'General'
   };
 }
 
@@ -26,7 +26,7 @@ function currentSupplier(){
 
 async function renderSupplierOverview(){
   const el = document.getElementById('view-sup-overview');
-  el.innerHTML = '<div class="panel"><p class="sub">Loading your supplier info…</p></div>';
+  el.innerHTML = '<div class="panel"><p class="sub">Loading your supplier infoâ€¦</p></div>';
 
   const s = currentSupplier();
   let myProducts = [];
@@ -49,9 +49,8 @@ async function renderSupplierOverview(){
 
     '<div class="kpi-row">' +
       '<div class="kpi"><div class="v">' + productCount + '</div><div class="l">Products you supply</div></div>' +
-      '<div class="kpi"><div class="v">' + fmtR(catalogValue) + '</div><div class="l">Catalog value (price × MOQ)</div></div>' +
+      '<div class="kpi"><div class="v">' + fmtR(catalogValue) + '</div><div class="l">Catalog value (price Ã— MOQ)</div></div>' +
       '<div class="kpi"><div class="v">' + avgLead + 'd</div><div class="l">Average lead time</div></div>' +
-      '<div class="kpi"><div class="v">' + s.on_time + '%</div><div class="l">On-time delivery</div></div>' +
       '<div class="kpi"><div class="v">' + s.quality + '</div><div class="l">Quality score</div></div>' +
     '</div>' +
 
@@ -62,9 +61,9 @@ async function renderSupplierOverview(){
           '<p class="sub" style="margin:0;">Update your business details. Changes save immediately.</p>' +
         '</div>' +
         '<div class="filter-row" style="margin:0;">' +
-          '<button id="edit-supplier-btn" class="filter-btn active" style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border:none; font-weight:700; padding:10px 20px;">✏️ Edit my info</button>' +
-          '<button id="export-sup-pdf" class="filter-btn" style="padding:10px 20px;">📄 PDF report</button>' +
-          '<button id="export-sup-csv" class="filter-btn" style="padding:10px 20px;">📥 Export CSV</button>' +
+          '<button id="edit-supplier-btn" class="filter-btn active" style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border:none; font-weight:700; padding:10px 20px;">âœï¸ Edit my info</button>' +
+          '<button id="export-sup-pdf" class="filter-btn" style="padding:10px 20px;">ðŸ“„ PDF report</button>' +
+          '<button id="export-sup-csv" class="filter-btn" style="padding:10px 20px;">ðŸ“¥ Export CSV</button>' +
         '</div>' +
       '</div>' +
     '</div>';
@@ -86,7 +85,7 @@ async function renderSupplierOverview(){
       ['Catalog value (est.)', fmtR(catalogValue)],
       ['Report generated', new Date().toLocaleString()]
     ];
-    exportPDF('Supplier Report — ' + s.name, s.id + ' · ' + s.city + ' · ' + s.category, columns, rows, 'supplier-' + s.id + '-' + new Date().toISOString().slice(0,10) + '.pdf');
+    exportPDF('Supplier Report â€” ' + s.name, s.id + ' Â· ' + s.city + ' Â· ' + s.category, columns, rows, 'supplier-' + s.id + '-' + new Date().toISOString().slice(0,10) + '.pdf');
   };
 
   document.getElementById('export-sup-csv').onclick = () => {
@@ -110,7 +109,7 @@ async function renderSupplierOverview(){
 
 async function renderSupplierProducts(){
   const el = document.getElementById('view-sup-products');
-  el.innerHTML = '<div class="panel"><p class="sub">Loading your catalog…</p></div>';
+  el.innerHTML = '<div class="panel"><p class="sub">Loading your catalogâ€¦</p></div>';
 
   let products = [];
   try { products = await API.mySupplierProducts(); }
@@ -125,10 +124,10 @@ async function renderSupplierProducts(){
         '<h2>Your catalog</h2>' +
         '<p class="sub">You do not supply any products yet.</p>' +
         '<div style="text-align:center; padding:40px 20px;">' +
-          '<div style="font-size:56px;">📦</div>' +
+          '<div style="font-size:56px;">ðŸ“¦</div>' +
           '<div style="font-weight:700; font-size:18px; margin-top:14px;">Browse the catalog to add products</div>' +
           '<p style="color:var(--muted); font-size:14px; margin-top:8px;">Choose which products you want to supply to vendors.</p>' +
-          '<button id="browse-catalog-btn" class="filter-btn active" style="margin-top:20px; background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border:none; font-weight:700; padding:12px 24px;">📚 Browse product catalog</button>' +
+          '<button id="browse-catalog-btn" class="filter-btn active" style="margin-top:20px; background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border:none; font-weight:700; padding:12px 24px;">ðŸ“š Browse product catalog</button>' +
         '</div>' +
       '</div>';
     document.getElementById('browse-catalog-btn').onclick = openBrowseCatalogModal;
@@ -137,9 +136,9 @@ async function renderSupplierProducts(){
 
   el.innerHTML =
     '<div class="filter-row" style="margin-bottom:22px;">' +
-      '<button id="browse-catalog-btn" class="filter-btn active" style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border:none; font-weight:700; padding:10px 20px;">📚 Browse &amp; add more</button>' +
-      '<button id="export-prod-csv" class="filter-btn" style="padding:10px 20px;">📥 Export catalog</button>' +
-      '<button id="refresh-sup-products" class="filter-btn" style="padding:10px 20px;">🔄 Refresh</button>' +
+      '<button id="browse-catalog-btn" class="filter-btn active" style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border:none; font-weight:700; padding:10px 20px;">ðŸ“š Browse &amp; add more</button>' +
+      '<button id="export-prod-csv" class="filter-btn" style="padding:10px 20px;">ðŸ“¥ Export catalog</button>' +
+      '<button id="refresh-sup-products" class="filter-btn" style="padding:10px 20px;">ðŸ”„ Refresh</button>' +
     '</div>' +
 
     '<div class="panel">' +
@@ -201,7 +200,7 @@ async function renderSupplierProducts(){
         await API.removeSupplierProduct(session.supplierId, pid);
         renderSupplierProducts();
       } catch (err){
-        alert('❌ ' + err.message);
+        alert('âŒ ' + err.message);
       }
     };
   });
@@ -217,7 +216,7 @@ function openEditProductModal(product){
   overlay.innerHTML =
     '<div style="background:#FBF8EF; border-radius:20px; max-width:520px; width:100%; padding:32px;">' +
       '<h2 style="font-family:\'Space Grotesk\'; font-size:22px; margin:0 0 6px; color:#000;">Edit product</h2>' +
-      '<p style="font-size:13px; color:#4A4A4A; margin:0 0 20px;">' + product.name + ' · ' + product.category + '</p>' +
+      '<p style="font-size:13px; color:#4A4A4A; margin:0 0 20px;">' + product.name + ' Â· ' + product.category + '</p>' +
 
       '<label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;">Your price (R)</label>' +
       '<input id="ep-price" type="number" step="0.01" value="' + product.price + '" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-size:14px; margin-bottom:16px;">' +
@@ -247,17 +246,17 @@ function openEditProductModal(product){
     const moq = parseInt(overlay.querySelector('#ep-moq').value);
     const lead_time = parseInt(overlay.querySelector('#ep-lead').value);
 
-    if (!price || price <= 0){ errEl.textContent = '❌ Enter a valid price.'; return; }
-    if (!moq || moq < 1){ errEl.textContent = '❌ Enter a valid MOQ.'; return; }
-    if (!lead_time || lead_time < 1){ errEl.textContent = '❌ Enter a valid lead time.'; return; }
+    if (!price || price <= 0){ errEl.textContent = 'âŒ Enter a valid price.'; return; }
+    if (!moq || moq < 1){ errEl.textContent = 'âŒ Enter a valid MOQ.'; return; }
+    if (!lead_time || lead_time < 1){ errEl.textContent = 'âŒ Enter a valid lead time.'; return; }
 
     try {
       await API.updateSupplierProduct(session.supplierId, product.product_id, { price, moq, lead_time });
       overlay.remove();
-      alert('✅ ' + product.name + ' updated');
+      alert('âœ… ' + product.name + ' updated');
       renderSupplierProducts();
     } catch (err){
-      errEl.textContent = '❌ ' + err.message;
+      errEl.textContent = 'âŒ ' + err.message;
     }
   };
 }
@@ -275,9 +274,9 @@ async function openBrowseCatalogModal(){
           '<h2 style="font-family:\'Space Grotesk\'; font-size:22px; margin:0 0 4px; color:#000;">Browse product catalog</h2>' +
           '<p style="font-size:13px; color:#4A4A4A; margin:0;">Click <strong>Add</strong> to start supplying a product.</p>' +
         '</div>' +
-        '<button id="bc-close" class="filter-btn" style="padding:8px 16px;">✕ Close</button>' +
+        '<button id="bc-close" class="filter-btn" style="padding:8px 16px;">âœ• Close</button>' +
       '</div>' +
-      '<div id="bc-loading" style="padding:40px; text-align:center; color:#6B6B6B;">Loading catalog…</div>' +
+      '<div id="bc-loading" style="padding:40px; text-align:center; color:#6B6B6B;">Loading catalogâ€¦</div>' +
       '<div id="bc-body" style="display:none;"></div>' +
     '</div>';
 
@@ -301,7 +300,7 @@ async function openBrowseCatalogModal(){
 
   body.innerHTML =
     '<p style="font-size:12.5px; color:#6B6B6B; margin-bottom:12px;">' +
-      catalog.filter(p => p.i_supply === 0).length + ' products available to add · ' +
+      catalog.filter(p => p.i_supply === 0).length + ' products available to add Â· ' +
       catalog.filter(p => p.i_supply === 1).length + ' already in your catalog' +
     '</p>' +
     '<div class="table-scroll" style="max-height:60vh;">' +
@@ -313,7 +312,7 @@ async function openBrowseCatalogModal(){
               '<td class="name-cell">' + p.name + '</td>' +
               '<td>' + p.category + '</td>' +
               '<td class="num">' + fmtR(p.retail_price) + '</td>' +
-              '<td>' + (p.i_supply === 1 ? '<span class="chip low">● You supply</span>' : '<span class="chip medium">Available</span>') + '</td>' +
+              '<td>' + (p.i_supply === 1 ? '<span class="chip low">â— You supply</span>' : '<span class="chip medium">Available</span>') + '</td>' +
               '<td>' + (p.i_supply === 1
                 ? '<button class="filter-btn" disabled style="opacity:0.5; cursor:not-allowed;">Added</button>'
                 : '<button class="filter-btn active bc-add-btn" data-pid="' + p.id + '" data-name="' + p.name.replace(/"/g,'&quot;') + '" data-retail="' + p.retail_price + '" style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border:none; font-weight:700;">Add</button>'
@@ -341,7 +340,7 @@ function openAddFromCatalogModal(productId, productName, retailPrice, parentOver
   inner.innerHTML =
     '<div style="background:#FBF8EF; border-radius:20px; max-width:520px; width:100%; padding:32px;">' +
       '<h2 style="font-family:\'Space Grotesk\'; font-size:22px; margin:0 0 6px; color:#000;">Add to your catalog</h2>' +
-      '<p style="font-size:13px; color:#4A4A4A; margin:0 0 20px;">' + productName + ' · Retail ' + fmtR(retailPrice) + '</p>' +
+      '<p style="font-size:13px; color:#4A4A4A; margin:0 0 20px;">' + productName + ' Â· Retail ' + fmtR(retailPrice) + '</p>' +
 
       '<label style="display:block; font-size:12.5px; font-weight:600; margin-bottom:8px; color:#000;">Your price (R)</label>' +
       '<input id="ac-price" type="number" step="0.01" value="' + suggested + '" style="width:100%; padding:12px; background:#F5F0E1; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#000; font-size:14px; margin-bottom:6px;">' +
@@ -372,18 +371,18 @@ function openAddFromCatalogModal(productId, productName, retailPrice, parentOver
     const moq = parseInt(inner.querySelector('#ac-moq').value);
     const lead_time = parseInt(inner.querySelector('#ac-lead').value);
 
-    if (!price || price <= 0){ errEl.textContent = '❌ Enter a valid price.'; return; }
-    if (!moq || moq < 1){ errEl.textContent = '❌ Enter a valid MOQ.'; return; }
-    if (!lead_time || lead_time < 1){ errEl.textContent = '❌ Enter a valid lead time.'; return; }
+    if (!price || price <= 0){ errEl.textContent = 'âŒ Enter a valid price.'; return; }
+    if (!moq || moq < 1){ errEl.textContent = 'âŒ Enter a valid MOQ.'; return; }
+    if (!lead_time || lead_time < 1){ errEl.textContent = 'âŒ Enter a valid lead time.'; return; }
 
     try {
       await API.addSupplierProduct(session.supplierId, { product_id: productId, price, moq, lead_time });
       inner.remove();
       if (parentOverlay) parentOverlay.remove();
-      alert('✅ ' + productName + ' added to your catalog');
+      alert('âœ… ' + productName + ' added to your catalog');
       renderSupplierProducts();
     } catch (err){
-      errEl.textContent = '❌ ' + err.message;
+      errEl.textContent = 'âŒ ' + err.message;
     }
   };
 }
@@ -439,17 +438,17 @@ function openEditSupplierModal(){
       category: overlay.querySelector('#es-cat').value,
       lead_time: parseInt(overlay.querySelector('#es-lead').value)
     };
-    if (!payload.name || !payload.city || !payload.category){ errEl.textContent = '❌ Name, city, and category are required.'; return; }
-    if (!payload.lead_time || payload.lead_time < 1){ errEl.textContent = '❌ Enter a valid lead time.'; return; }
+    if (!payload.name || !payload.city || !payload.category){ errEl.textContent = 'âŒ Name, city, and category are required.'; return; }
+    if (!payload.lead_time || payload.lead_time < 1){ errEl.textContent = 'âŒ Enter a valid lead time.'; return; }
 
     try {
       const res = await API.updateSupplier(s.id, payload);
       Object.assign(s, res.supplier);
       overlay.remove();
-      alert('✅ Supplier info updated');
+      alert('âœ… Supplier info updated');
       renderSupplierOverview();
     } catch (err){
-      errEl.textContent = '❌ ' + err.message;
+      errEl.textContent = 'âŒ ' + err.message;
     }
   };
 }
@@ -459,7 +458,7 @@ function openEditSupplierModal(){
 async function renderSupplierDiscounts(){
   const el = document.getElementById('view-sup-discounts');
   const s = currentSupplier();
-  el.innerHTML = '<div class="panel"><p class="sub">Loading your discounts…</p></div>';
+  el.innerHTML = '<div class="panel"><p class="sub">Loading your discountsâ€¦</p></div>';
 
   let discounts = [];
   let myProducts = [];
@@ -483,7 +482,7 @@ async function renderSupplierDiscounts(){
           '<p class="sub" style="margin:0;">Promote your products. Vendors see these offers in their "What to stock" view.</p>' +
         '</div>' +
         '<div class="filter-row" style="margin:0;">' +
-          '<button id="create-discount-btn" class="filter-btn active" style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border:none; font-weight:700; padding:10px 20px;">➕ New discount</button>' +
+          '<button id="create-discount-btn" class="filter-btn active" style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border:none; font-weight:700; padding:10px 20px;">âž• New discount</button>' +
         '</div>' +
       '</div>' +
     '</div>' +
@@ -496,9 +495,9 @@ async function renderSupplierDiscounts(){
 
     '<div class="panel">' +
       '<h2>Your offers</h2>' +
-      '<p class="sub">' + discounts.length + ' total · ' + active.length + ' active</p>' +
+      '<p class="sub">' + discounts.length + ' total Â· ' + active.length + ' active</p>' +
       (discounts.length === 0
-        ? '<div style="text-align:center; padding:50px 20px;"><div style="font-size:56px;">🎁</div><div style="font-weight:700; font-size:18px; margin-top:14px;">No discounts yet</div><p style="color:var(--muted); font-size:14px; margin-top:8px;">Create your first offer to attract vendors.</p></div>'
+        ? '<div style="text-align:center; padding:50px 20px;"><div style="font-size:56px;">ðŸŽ</div><div style="font-weight:700; font-size:18px; margin-top:14px;">No discounts yet</div><p style="color:var(--muted); font-size:14px; margin-top:8px;">Create your first offer to attract vendors.</p></div>'
         : '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px; margin-top:20px;">' +
           discounts.map(d => {
             const isExpired = d.valid_until && new Date(d.valid_until) < now;
@@ -534,7 +533,7 @@ async function renderSupplierDiscounts(){
       try {
         await API.deleteDiscount(btn.dataset.id);
         renderSupplierDiscounts();
-      } catch (err){ alert('❌ ' + err.message); }
+      } catch (err){ alert('âŒ ' + err.message); }
     };
   });
 }
@@ -543,7 +542,7 @@ function openCreateDiscountModal(){
   const s = currentSupplier();
   API.mySupplierProducts().then(products => {
     if (!products || products.length === 0){
-      alert('❌ You have no products in your catalog. Add products first via "My products".');
+      alert('âŒ You have no products in your catalog. Add products first via "My products".');
       return;
     }
 
@@ -551,7 +550,7 @@ function openCreateDiscountModal(){
     overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
 
     const productOptions = products.map(p =>
-      '<option value="' + p.product_id + '" data-price="' + p.price + '">' + p.name + ' — ' + fmtR(p.price) + '</option>'
+      '<option value="' + p.product_id + '" data-price="' + p.price + '">' + p.name + ' â€” ' + fmtR(p.price) + '</option>'
     ).join('');
 
     overlay.innerHTML =
@@ -591,20 +590,20 @@ function openCreateDiscountModal(){
         valid_until: overlay.querySelector('#cd-until').value || null
       };
       if (!payload.discount_percent || payload.discount_percent <= 0 || payload.discount_percent > 90){
-        errEl.textContent = '❌ Discount must be 1–90%.';
+        errEl.textContent = 'âŒ Discount must be 1â€“90%.';
         return;
       }
       if (!payload.min_quantity || payload.min_quantity < 1){
-        errEl.textContent = '❌ MOQ must be at least 1.';
+        errEl.textContent = 'âŒ MOQ must be at least 1.';
         return;
       }
       try {
         await API.createDiscount(payload);
         overlay.remove();
-        alert('✅ Discount published');
+        alert('âœ… Discount published');
         renderSupplierDiscounts();
       } catch (err){
-        errEl.textContent = '❌ ' + err.message;
+        errEl.textContent = 'âŒ ' + err.message;
       }
     };
   }).catch(err => alert('Could not load products: ' + err.message));
