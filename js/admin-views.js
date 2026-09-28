@@ -34,22 +34,22 @@ function clearAdminCache() {
 
 async function renderAdminOverview(){
   const el = document.getElementById('view-adm-overview');
-  const k  = DATA.kpis;
+  const k  = (typeof DATA !== 'undefined' && DATA.kpis) ? DATA.kpis : {};
 
   let live = null;
   try { live = await API.request('/admin/stats'); }
   catch (e) { console.warn('[admin] live stats unavailable, using cached data', e); }
 
-  const vendors      = live ? live.vendors      : k.num_vendors;
-  const suppliers    = live ? live.suppliers    : DATA.suppliers.length;
-  const products     = live ? live.products     : k.num_products;
-  const transactions = live ? live.transactions : k.total_transactions;
-  const revenue      = live ? live.revenue      : k.total_revenue;
-  const byCity       = live ? live.byCity       : DATA.vendors_by_city.map(c => ({ label: c.city,  value: c.count }));
-  const byType       = live ? live.byType       : DATA.vendors_by_type.map(t => ({ label: t.type, value: t.count }));
+  const vendors      = live ? live.vendors      : (k.num_vendors || 0);
+  const suppliers    = live ? live.suppliers    : 0;
+  const products     = live ? live.products     : (k.num_products || 0);
+  const transactions = live ? live.transactions : (k.total_transactions || 0);
+  const revenue      = live ? live.revenue      : (k.total_revenue || 0);
+  const byCity       = live ? live.byCity       : [];
+  const byType       = live ? live.byType       : [];
 
   el.innerHTML =
-    '<div class="hero"><div class="hero-figure"><div class="label">Network-wide revenue, ' + k.date_start + ' — ' + k.date_end + '</div><div class="num display"><span class="unit">R</span>' + (revenue/1000000).toFixed(2) + '<span class="unit" style="font-size:32px;color:var(--ink);margin-left:4px;">M</span></div></div><div class="hero-sub"><span id="hero-vendors">' + vendors + '</span> vendor accounts and <span id="hero-suppliers">' + suppliers + '</span> supplier accounts under management across ' + byCity.length + ' cities.</div></div>'
+    '<div class="hero"><div class="hero-figure"><div class="label">Network-wide revenue, ' + (k.date_start || '') + ' — ' + (k.date_end || '') + '</div><div class="num display"><span class="unit">R</span>' + (revenue/1000000).toFixed(2) + '<span class="unit" style="font-size:32px;color:var(--ink);margin-left:4px;">M</span></div></div><div class="hero-sub"><span id="hero-vendors">' + vendors + '</span> vendor accounts and <span id="hero-suppliers">' + suppliers + '</span> supplier accounts under management across ' + byCity.length + ' cities.</div></div>'
     + '<div class="kpi-row">'
       + '<div class="kpi"><div class="v" id="kpi-vendors">'   + vendors      + '</div><div class="l">Vendor accounts</div></div>'
       + '<div class="kpi"><div class="v" id="kpi-suppliers">' + suppliers    + '</div><div class="l">Supplier accounts</div></div>'
@@ -96,7 +96,7 @@ async function renderAdminVendors(){
         '<input id="vendor-search" type="text" placeholder="Search vendor ID or city..." class="filter-btn" style="cursor:text; min-width:220px; text-align:left;">' +
       '</div>' +
       '<div class="table-scroll">' +
-        '<table><thead><tr><th>Vendor</th><th>City</th><th>Type</th><th class="num">Revenue</th><th class="num">Transactions</th><th class="num">Products sold</th><th>Actions</th></tr></thead>' +
+        '<table><thead><tr><th>Vendor</th><th>City</th><th>Type</th><th class="num">Revenue</th><th class="num">Transactions</th><th class="num">Products sold</th><th>Status</th><th>Actions</th></tr></thead>' +
         '<tbody id="adm-vendors-body"></tbody></table>' +
       '</div>' +
     '</div>';
@@ -124,6 +124,7 @@ async function renderVendorRows(){
       '<td class="num">' + fmtR(v.revenue) + '</td>' +
       '<td class="num">' + v.transactions + '</td>' +
       '<td class="num">' + v.products + '</td>' +
+      '<td><span class="chip low">Active</span></td>' +
       '<td style="display:flex;gap:6px;">' +
         '<button class="filter-btn edit-vendor-btn" data-id="' + v.id + '">Edit</button>' +
         '<button class="filter-btn delete-vendor-btn" data-id="' + v.id + '" style="color:var(--danger);">Delete</button>' +
@@ -140,12 +141,12 @@ async function renderVendorRows(){
   });
 }
 
-function openAddVendorModal(){ showVendorModal(null); }
+async function openAddVendorModal(){ await showVendorModal(null); }
 
 async function openEditVendorModal(id){
   const vendors = await fetchAdminVendors();
   const vendor = vendors.find(v => v.id === id);
-  showVendorModal(vendor);
+  await showVendorModal(vendor);
 }
 
 async function openDeleteVendor(id){
@@ -160,12 +161,13 @@ async function openDeleteVendor(id){
   }
 }
 
-function showVendorModal(vendor){
+async function showVendorModal(vendor){
   const isEdit = !!vendor;
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
 
-  const cities = (DATA.cities || []).map(c => c.city);
+  const citiesFromApi = await fetchAdminCities();
+  const cities = citiesFromApi.map(c => c.city);
   const types = ['Food Vendor', 'Drink Vendor', 'Snack Vendor', 'Sweet Vendor', 'General Vendor', 'Accessory Vendor', 'Fruit Vendor'];
 
   const cityOptions = cities.map(c =>
@@ -264,8 +266,8 @@ async function renderAdminSuppliers(){
       '<h2>Manage suppliers</h2>' +
       '<p class="sub">' + suppliers.length + ' active suppliers across the network.</p>' +
       '<div class="table-scroll" style="max-height:460px;">' +
-        '<table><thead><tr><th>Supplier</th><th>City</th><th>Category</th><th class="num">Rating</th><th class="num">On-time %</th><th>Status</th></tr></thead><tbody>' +
-        suppliers.map(s => '<tr><td class="name-cell">' + s.name + '</td><td>' + s.city + '</td><td>' + s.category + '</td><td class="num">' + (s.rating || 0).toFixed(1) + '</td><td class="num">' + (s.on_time || 0) + '%</td><td><span class="chip ' + (s.status==='Preferred'?'low':s.status==='Reliable'?'medium':'soon') + '">' + s.status + '</span></td></tr>').join('') +
+        '<table><thead><tr><th>Supplier</th><th>City</th><th>Category</th><th class="num">Rating</th><th>Status</th></tr></thead><tbody>' +
+        suppliers.map(s => '<tr><td class="name-cell">' + s.name + '</td><td>' + s.city + '</td><td>' + s.category + '</td><td class="num">' + (s.rating || 0).toFixed(1) + '</td><td><span class="chip ' + (s.approved === 0 ? 'medium' : 'low') + '">' + (s.approved === 0 ? 'Pending' : 'Active') + '</span></td></tr>').join('') +
         '</tbody></table>' +
       '</div>' +
     '</div>';
@@ -273,8 +275,9 @@ async function renderAdminSuppliers(){
 
 async function renderAdminData(){
   const el = document.getElementById('view-adm-data');
-  const allProducts = DATA.reorder_all || [];
   const suppliers = await fetchAdminSuppliers();
+  let allProducts = [];
+  try { allProducts = await API.request('/products'); } catch (e) { allProducts = []; }
   const vendors = await fetchAdminVendors();
   const cities = await fetchAdminCities();
   const categories = await fetchAdminCategories();
@@ -338,6 +341,12 @@ async function renderAdminData(){
 
 async function renderAdminReports(){
   const _reportsVendors = await fetchAdminVendors();
+  let _monthly = [];
+  let _categories = [];
+  let _cities = [];
+  try { _monthly = await API.request('/sales/monthly'); } catch(e){}
+  try { _categories = await fetchAdminCategories(); } catch(e){}
+  try { _cities = await fetchAdminCities(); } catch(e){}
   const el = document.getElementById('view-adm-reports');
   el.innerHTML = '<div class="grid grid-2"><div class="panel"><h2>Revenue by month, network-wide</h2><p class="sub">All vendors, all cities.</p><div class="chart-wrap" style="height:280px;"><canvas id="chart-rep-monthly"></canvas></div></div><div class="panel"><h2>Revenue by category</h2><p class="sub">Full catalogue performance.</p><div class="chart-wrap" style="height:280px;"><canvas id="chart-rep-category"></canvas></div></div></div>'
     + '<div class="panel"><h2>Top 10 vendors by revenue</h2><p class="sub">Highest-performing accounts network-wide.</p><table><thead><tr><th>Vendor</th><th>City</th><th class="num">Revenue</th><th class="num">Transactions</th></tr></thead><tbody>'
@@ -348,16 +357,16 @@ async function renderAdminReports(){
     +   '<button id="adm-export-csv" class="filter-btn" style="padding:10px 20px;">ðŸ“¥ Export CSV</button>'
     + '</div>';
 
-  new Chart(document.getElementById('chart-rep-monthly'), {type:'line',data:{labels: DATA.monthly.map(m=>m.month), datasets:[{label:'Revenue', data: DATA.monthly.map(m=>m.revenue), borderColor:VERM, backgroundColor:'rgba(30,78,140,0.15)', fill:true, tension:0.25, pointRadius:3, borderWidth:2.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:LINE},ticks:{callback:v=>fmtR(v)}},x:{grid:{display:false}}}}});
-  new Chart(document.getElementById('chart-rep-category'), {type:'bar',data:{labels: DATA.categories.map(c=>c.category), datasets:[{data: DATA.categories.map(c=>c.revenue), backgroundColor: DATA.categories.map(c=>CAT_HEX[c.category]), borderColor: INK, borderWidth:1}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:LINE},ticks:{callback:v=>fmtR(v)}},y:{grid:{display:false}}}}});
+  new Chart(document.getElementById('chart-rep-monthly'), {type:'line',data:{labels: _monthly.map(m=>m.month), datasets:[{label:'Revenue', data: _monthly.map(m=>m.revenue), borderColor:VERM, backgroundColor:'rgba(30,78,140,0.15)', fill:true, tension:0.25, pointRadius:3, borderWidth:2.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:LINE},ticks:{callback:v=>fmtR(v)}},x:{grid:{display:false}}}}});
+  new Chart(document.getElementById('chart-rep-category'), {type:'bar',data:{labels: _categories.map(c=>(c.category||c.name)), datasets:[{data: _categories.map(c=>(c.revenue||0)), backgroundColor: _categories.map(c=>CAT_HEX[c.category||c.name]||'#888'), borderColor: INK, borderWidth:1}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:LINE},ticks:{callback:v=>fmtR(v)}},y:{grid:{display:false}}}}});
 
   document.getElementById('adm-export-pdf').onclick = () => {
     const columns = ['Month', 'Revenue', 'Profit', 'Units'];
-    const rows = DATA.monthly.map(m => [m.month, fmtR(m.revenue), fmtR(m.profit), fmtNum(m.units)]);
+    const rows = _monthly.map(m => [m.month, fmtR(m.revenue), fmtR(m.profit), fmtNum(m.units)]);
     exportPDF('Network Annual Report', 'All vendors Â· All cities Â· 2025', columns, rows, 'network-report-' + new Date().toISOString().slice(0,10) + '.pdf');
   };
   document.getElementById('adm-export-csv').onclick = () => {
-    const rows = DATA.monthly.map(m => ({Month: m.month, 'Revenue (R)': m.revenue, 'Profit (R)': m.profit, Units: m.units}));
+    const rows = _monthly.map(m => ({Month: m.month, 'Revenue (R)': m.revenue, 'Profit (R)': m.profit, Units: m.units}));
     exportCSV('network-monthly-' + new Date().toISOString().slice(0,10) + '.csv', rows);
   };
 }

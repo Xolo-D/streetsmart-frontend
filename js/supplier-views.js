@@ -627,16 +627,27 @@ async function renderSupplierDemand(){
     return;
   }
 
-  // Cross-reference with DATA.reorder_all for demand predictions
+  // Cross-reference with predictions for demand
+  // Fetch real predictions from the ML service
+  let predictions = {};
+  try {
+    const allPreds = await API.request('/predictions');
+    if (Array.isArray(allPreds)) {
+      allPreds.forEach(p => {
+        const pid = p.product_id || p.id;
+        if (pid) predictions[pid] = p.predicted_daily_demand || 0;
+      });
+    }
+  } catch (e) { console.warn('Could not load predictions:', e.message); }
+
   const demandData = myProducts.map(p => {
-    const match = (DATA.reorder_all || []).find(r => r.id === p.product_id);
     return {
       name: p.name,
       category: p.category,
       price: p.price,
       moq: p.moq,
       lead_time: p.lead_time,
-      predicted_demand: match ? match.predicted_daily_demand : 0
+      predicted_demand: predictions[p.product_id] || 0
     };
   });
 

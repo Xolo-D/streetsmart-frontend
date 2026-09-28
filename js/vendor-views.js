@@ -30,24 +30,33 @@ async function renderOverview(){
   const transactions = (stats && stats.transactions) || 0;
   const skus = (stats && stats.skus_sold) || 0;
 
-  const banner = vendor ? '<div style="background:linear-gradient(135deg,#DCE6F2,#FFF); border:1px solid rgba(30,78,140,0.25); border-radius:14px; padding:16px 20px; margin-bottom:14px;"><div style="font-weight:700; color:#000; font-size:15px;">Your store: ' + vendor.id + ' · ' + vendor.city + ' · ' + vendor.type + '</div></div>' : '';
-
-  el.innerHTML = banner +
-    '<div class="hero"><div class="hero-figure"><div class="label">Your store revenue</div><div class="num display"><span class="unit">R</span>' + (revenue/1000).toFixed(1) + '<span class="unit" style="font-size:32px;color:var(--ink);margin-left:4px;">K</span></div></div></div>' +
+  el.innerHTML =
+    '<div class="dash-header">' +
+      '<div>' +
+        (vendor ? '<div class="dh-meta"><span class="dot"></span>' + vendor.id + ' · ' + vendor.city + ' · ' + vendor.type + '</div>' : '') +
+        '<div class="display" style="font-size:22px;">Welcome back</div>' +
+        '<div class="sub" style="color:var(--muted); font-size:13px; margin-top:4px;">Here is how your store is doing.</div>' +
+      '</div>' +
+      '<div class="dh-figure">' +
+        '<div class="label">Store revenue</div>' +
+        '<div class="num">R' + (revenue/1000).toFixed(1) + '<span class="unit">K</span></div>' +
+      '</div>' +
+    '</div>' +
     '<div class="kpi-row">' +
       '<div class="kpi"><div class="v">' + fmtR(profit) + '</div><div class="l">Your profit</div></div>' +
       '<div class="kpi"><div class="v">' + fmtNum(units) + '</div><div class="l">Units sold</div></div>' +
       '<div class="kpi"><div class="v">' + fmtNum(transactions) + '</div><div class="l">Transactions</div></div>' +
       '<div class="kpi"><div class="v">' + fmtNum(skus) + '</div><div class="l">Products tracked</div></div>' +
     '</div>' +
-    '<div class="panel" style="margin-top:24px;"><h2>Quick actions</h2><p class="sub">What you can do.</p><div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-top:18px;">' +
-      '<button class="filter-btn" onclick="showTab(\'predictions\')" style="padding:20px; text-align:left; background:#F5F0E1; border-radius:12px; cursor:pointer;"><div style="font-size:24px;">📦</div><div style="font-weight:700; color:#000;">What to stock</div></button>' +
-      '<button class="filter-btn" onclick="showTab(\'inventory\')" style="padding:20px; text-align:left; background:#F5F0E1; border-radius:12px; cursor:pointer;"><div style="font-size:24px;">💰</div><div style="font-weight:700; color:#000;">Record sales</div></button>' +
-      '<button class="filter-btn" onclick="showTab(\'inventory\')" style="padding:20px; text-align:left; background:#F5F0E1; border-radius:12px; cursor:pointer;"><div style="font-size:24px;">📈</div><div style="font-weight:700; color:#000;">Update stock</div></button>' +
-      '<button class="filter-btn" onclick="showTab(\'suppliers\')" style="padding:20px; text-align:left; background:#F5F0E1; border-radius:12px; cursor:pointer;"><div style="font-size:24px;">🏪</div><div style="font-weight:700; color:#000;">Suppliers</div></button>' +
-    '</div></div>' +
-    '<div class="filter-row" style="margin-top:22px;">' +
-      '<button id="export-vendor-pdf" class="filter-btn active" style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF);color:#fff;border:none;font-weight:700;padding:10px 20px;">📄 Download PDF report</button>' +
+    '<div class="section-head"><h3>Quick actions</h3></div>' +
+    '<div class="action-grid">' +
+      '<button class="action-tile" onclick="showTab(\'predictions\')"><div class="at-icon">📦</div><div><div class="at-label">What to stock</div><div class="at-sub">AI reorder guidance</div></div></button>' +
+      '<button class="action-tile" onclick="showTab(\'inventory\')"><div class="at-icon">💰</div><div><div class="at-label">Record sales</div><div class="at-sub">Log a transaction</div></div></button>' +
+      '<button class="action-tile" onclick="showTab(\'inventory\')"><div class="at-icon">📈</div><div><div class="at-label">Update stock</div><div class="at-sub">Adjust stock levels</div></div></button>' +
+      '<button class="action-tile" onclick="showTab(\'suppliers\')"><div class="at-icon">🏪</div><div><div class="at-label">Suppliers</div><div class="at-sub">Browse the directory</div></div></button>' +
+    '</div>' +
+    '<div class="filter-row" style="margin-top:26px;">' +
+      '<button id="export-vendor-pdf" class="filter-btn active" style="font-weight:700;padding:10px 20px;">📄 Download PDF report</button>' +
       '<button id="export-vendor-csv" class="filter-btn" style="padding:10px 20px;">📥 Export CSV</button>' +
     '</div>';
 
@@ -125,11 +134,23 @@ async function renderSales(){
       '<div class="chart-wrap" style="height:320px;"><canvas id="vendor-sales-trend"></canvas></div>' +
     '</div>' +
 
+    '<div class="panel" style="margin-top:24px;">' +
+      '<h2>Product trends</h2>' +
+      '<p class="sub">Your sales per product (solid) vs regional average (dashed) — last 90 days.</p>' +
+      '<div class="filter-row" style="margin-bottom:16px;">' +
+        '<button class="filter-btn active pt-trend-btn" data-days="30">Last 30 days</button>' +
+        '<button class="filter-btn pt-trend-btn" data-days="90">Last 90 days</button>' +
+        '<button class="filter-btn pt-trend-btn" data-days="180">Last 180 days</button>' +
+      '</div>' +
+      '<div id="pt-status" class="sub" style="margin-bottom:8px;"></div>' +
+      '<div class="chart-wrap" style="height:360px;"><canvas id="vendor-product-trend"></canvas></div>' +
+    '</div>' +
+
     (hasSales
       ? '<div class="panel"><h2>Sales history</h2><p class="sub">Your recent sales, newest first.</p><div class="table-scroll" style="max-height:400px;"><table><thead><tr><th>When</th><th>Product</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Total</th></tr></thead><tbody>' +
         sales.map(s => '<tr><td>' + new Date(s.sold_at).toLocaleString('en-ZA') + '</td><td class="name-cell">' + (s.product_name || s.product_id) + '</td><td class="num">' + s.quantity + '</td><td class="num">' + fmtR(s.unit_price) + '</td><td class="num">' + fmtR(s.total_amount) + '</td></tr>').join('') +
         '</tbody></table></div></div>'
-      : '<div class="panel"><h2>Sales history</h2><p class="sub">Sales you have recorded appear here.</p><div style="text-align:center; padding:50px 20px;"><div style="font-size:56px;">📊</div><div style="font-weight:700; font-size:18px; margin-top:14px;">No sales recorded yet</div><div style="color:var(--muted); font-size:14px; margin-top:8px;">Go to <strong>Inventory &amp; reorder</strong> and click "Record a sale" to get started.</div></div></div>'
+      : '<div class="panel"><h2>Sales history</h2><p class="sub">Sales you have recorded appear here.</p><div class="empty-state"><div class="es-icon">📊</div><div class="es-title">No sales recorded yet</div><div class="es-sub">Go to <strong>Inventory &amp; reorder</strong> and click "Record a sale" to get started.</div></div></div>'
     );
 
   // Chart renderer
@@ -224,6 +245,108 @@ async function renderSales(){
       }
     };
   });
+
+  // ══════════════════════════════════════════════════════════════
+  // Product Trends Chart (mine vs regional)
+  // ══════════════════════════════════════════════════════════════
+  const PALETTE = ['#1E4E8C', '#C4432B', '#4C6B3F', '#D89A2E', '#7B1FA2', '#00838F', '#5D4037', '#455A64'];
+
+  function renderProductTrendChart(trendData) {
+    const canvas = document.getElementById('vendor-product-trend');
+    const statusEl = document.getElementById('pt-status');
+    if (!canvas) return;
+
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+
+    const series = trendData.series || [];
+    if (series.length === 0) {
+      if (statusEl) statusEl.textContent = 'No products in your catalog yet.';
+      return;
+    }
+
+    const datasets = [];
+    series.forEach((s, i) => {
+      const color = PALETTE[i % PALETTE.length];
+      datasets.push({
+        label: s.name + ' (you)',
+        data: s.mine || [],
+        borderColor: color,
+        backgroundColor: 'transparent',
+        tension: 0.35,
+        borderWidth: 2.5,
+        pointRadius: 3,
+        pointHoverRadius: 5
+      });
+      datasets.push({
+        label: s.name + ' (region)',
+        data: s.regional || [],
+        borderColor: color,
+        backgroundColor: 'transparent',
+        tension: 0.35,
+        borderWidth: 1.5,
+        borderDash: [4, 3],
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        hidden: series.length > 3    // hide regional lines by default if many products
+      });
+    });
+
+    new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: trendData.dates.map(d => d.slice(5)),   // MM-DD
+        datasets: datasets
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, usePointStyle: true, padding: 10, font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: function(ctx){
+                return ctx.dataset.label + ': ' + ctx.parsed.y + ' units';
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 14 } },
+          y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.08)' }, ticks: { callback: v => v + 'u' } }
+        }
+      }
+    });
+
+    const city = trendData.vendorCity || '';
+    const nearby = (trendData.nearbyCities || []).join(', ');
+    if (statusEl) {
+      statusEl.innerHTML = '<strong>' + city + '</strong>' +
+        (nearby ? ' · nearby: ' + nearby : '');
+    }
+  }
+
+  async function loadProductTrend(days) {
+    const statusEl = document.getElementById('pt-status');
+    if (statusEl) statusEl.textContent = 'Loading…';
+    try {
+      const data = await API.request('/vendors/me/sales-trend-by-product?days=' + days);
+      renderProductTrendChart(data);
+    } catch (e) {
+      if (statusEl) statusEl.textContent = 'Could not load product trends: ' + e.message;
+    }
+  }
+
+  el.querySelectorAll('.pt-trend-btn').forEach(btn => {
+    btn.onclick = () => {
+      el.querySelectorAll('.pt-trend-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadProductTrend(parseInt(btn.dataset.days, 10));
+    };
+  });
+
+  loadProductTrend(30);
 }
 
 /* WHAT TO STOCK */
@@ -362,7 +485,7 @@ async function renderPredictions(){
 }
 
 function renderDiscountsPanel(discountedProducts, discountMap) {
-  return '<div class="panel" style="background:linear-gradient(135deg,#FEF3C7,#FFFBEB); border:1.5px solid #D89A2E;">' +
+  return '<div class="panel" style="background:linear-gradient(135deg,#FFF6DE,#FFFDF7); border:1px solid rgba(180,117,14,0.30);">' +
     '<div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">' +
       '<div style="font-size:28px;">🔥</div>' +
       '<div><h2 style="margin:0; color:#7A5610;">Special offers for you</h2>' +
@@ -375,23 +498,108 @@ function renderDiscountsPanel(discountedProducts, discountMap) {
         const savingsPerUnit = p.unit_price - discounted;
         const suggestedQty = Math.max(d.min_quantity, Math.ceil((p.predicted_daily_demand || 5) * 5));
         const totalSavings = savingsPerUnit * suggestedQty;
-        return '<div style="background:white; border:1px solid rgba(216,154,46,0.35); border-radius:14px; padding:16px;">' +
+        return '<div class="offer-card">' +
           '<div style="display:flex; justify-content:space-between; margin-bottom:10px;">' +
             '<div><div style="font-weight:700; font-size:15px;">' + p.name + '</div>' +
-            '<div style="font-size:11.5px; color:#6B6B6B; margin-top:2px;">' + p.category + '</div></div>' +
-            '<div style="text-align:right;"><div style="font-weight:700; font-size:22px; color:#C4432B; line-height:1;">' + d.discount_percent + '%</div>' +
+            '<div class="sub-cell">' + p.category + '</div></div>' +
+            '<div style="text-align:right;"><div style="font-weight:700; font-size:22px; color:var(--danger); line-height:1;">' + d.discount_percent + '%</div>' +
             '<div style="font-size:10px; color:#7A5610;">off</div></div>' +
           '</div>' +
-          '<div style="display:flex; align-items:baseline; gap:10px; padding:10px; background:rgba(216,154,46,0.1); border-radius:8px; margin-bottom:10px;">' +
-            '<div style="font-weight:700; font-size:18px; color:#4C6B3F;">' + fmtR(discounted) + '</div>' +
-            '<div style="font-size:12px; color:#6B6B6B; text-decoration:line-through;">' + fmtR(p.unit_price) + '</div>' +
+          '<div style="display:flex; align-items:baseline; gap:10px; padding:10px; background:var(--warning-soft); border-radius:8px; margin-bottom:10px;">' +
+            '<div class="oc-price">' + fmtR(discounted) + '</div>' +
+            '<div class="oc-was">' + fmtR(p.unit_price) + '</div>' +
           '</div>' +
-          '<div style="font-size:12px; color:#4A4A4A; margin-bottom:8px;">📦 Order <strong>' + d.min_quantity + '+ units</strong> to qualify</div>' +
-          '<div style="padding:8px 12px; background:rgba(76,107,63,0.1); border-radius:8px; font-size:12px; color:#2F4A26;">💰 Estimated savings: <strong>' + fmtR(totalSavings) + '</strong></div>' +
+          '<div class="oc-min">📦 Order <strong>' + d.min_quantity + '+ units</strong> to qualify</div>' +
+          '<div class="oc-save">💰 Estimated savings: <strong>' + fmtR(totalSavings) + '</strong></div>' +
         '</div>';
       }).join('') +
     '</div>' +
   '</div>';
+}
+
+function getCategoryIcon(category) {
+  const map = {
+    'Beverages': '🥤',
+    'Snacks': '🍿',
+    'Street Foods': '🍞',
+    'Fast Food': '🍔',
+    'Fresh Produce': '🍎',
+    'Personal Care': '🧴',
+    'Mobile Accessories': '📱',
+    'Street Accessories': '🕶️',
+    'Street Essentials': '🧴',
+    'Street Sweets': '🍬'
+  };
+  return map[category] || '📦';
+}
+
+function openPredictModal(row, discount) {
+  const icon = getCategoryIcon(row.category);
+  const units = Math.round(row.predicted_demand || 0);
+  const stock = row.current_stock || 0;
+
+  const demand = row.predicted_demand || 0;
+  const daysCovered = demand > 0 ? (stock / demand) : 999;
+  let advice;
+  if (daysCovered < 1) {
+    advice = 'Stock is running low — only ' + stock + ' left. Order at least ' + Math.ceil(demand * 3) + ' units urgently.';
+  } else if (daysCovered < 3) {
+    advice = 'You have ' + stock + ' in stock — about ' + daysCovered.toFixed(1) + ' days of cover. Recommended order: ~' + Math.ceil(demand * 2) + ' units.';
+  } else if (daysCovered < 7) {
+    advice = 'You have ' + stock + ' in stock — enough for ~' + daysCovered.toFixed(0) + ' days. Consider topping up soon.';
+  } else {
+    advice = 'You have ' + stock + ' in stock — plenty for current demand.';
+  }
+
+  const wxClass = row.weather === 'Rainy' ? 'wx-rainy' : row.weather === 'Cloudy' ? 'wx-cloudy' : 'wx-sunny';
+  const wxIcon = row.weather === 'Rainy' ? '🌧️' : row.weather === 'Cloudy' ? '⛅' : '☀️';
+
+  const trendChip = row.trend_pct === null
+    ? '<span class="factor-chip steady">📊 new activity</span>'
+    : row.trend_pct === 0
+      ? '<span class="factor-chip steady">📊 steady sales</span>'
+      : row.trend_pct > 0
+        ? '<span class="factor-chip trend-up">📈 +' + row.trend_pct + '% trend</span>'
+        : '<span class="factor-chip trend-down">📉 ' + row.trend_pct + '% trend</span>';
+
+  const weekendChip = row.is_weekend ? '<span class="factor-chip weekend">📅 weekend</span>' : '';
+  const holidayChip = row.is_holiday ? '<span class="factor-chip holiday">🎉 ' + row.is_holiday + '</span>' : '';
+  const discChip = discount ? '<span class="factor-chip" style="background:#FFE0B2;color:#BF360C;">🔥 ' + discount.discount_percent + '% off</span>' : '';
+
+  const modal = document.createElement('div');
+  modal.className = 'pm-overlay';
+  modal.innerHTML =
+    '<div class="pm-modal">' +
+      '<div class="pm-head">' +
+        '<div class="pm-icon">' + icon + '</div>' +
+        '<div class="pm-title">' +
+          '<div class="pm-name">' + row.product_name + '</div>' +
+          '<div class="pm-cat">' + row.category + '</div>' +
+        '</div>' +
+        '<button class="pm-close" type="button">✕</button>' +
+      '</div>' +
+      '<div class="pm-units">' +
+        '<div class="pm-units-num">' + units + '</div>' +
+        '<div class="pm-units-label">units expected ' + (row.day_label === 'Tomorrow' ? 'tomorrow' : 'on ' + row.day_label) + '</div>' +
+      '</div>' +
+      '<div class="pm-sentence">' + row.sentence + '</div>' +
+      '<div class="pm-sentence" style="color:#1E4E8C;">' + advice + '</div>' +
+      '<div class="pm-chips">' +
+        '<span class="factor-chip ' + wxClass + '">' + wxIcon + ' ' + row.weather + '</span>' +
+        trendChip + weekendChip + holidayChip +
+        '<span class="factor-chip season">🍃 ' + row.season + '</span>' +
+        discChip +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(modal);
+
+  const close = () => modal.remove();
+  modal.querySelector('.pm-close').onclick = close;
+  modal.onclick = (e) => { if (e.target === modal) close(); };
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
+  });
 }
 
 function renderHorizonResults(el, data, discountMap) {
@@ -414,58 +622,28 @@ function renderHorizonResults(el, data, discountMap) {
     const first = rows[0];
     const wxIcon = first.weather === 'Rainy' ? '🌧️' : first.weather === 'Cloudy' ? '⛅' : '☀️';
     const holidayChip = first.is_holiday ? '<span class="factor-chip holiday">🎉 ' + first.is_holiday + '</span>' : '';
+
     const cards = rows.map(r => {
       const wxClass = r.weather === 'Rainy' ? 'wx-rainy' : r.weather === 'Cloudy' ? 'wx-cloudy' : 'wx-sunny';
       const trendChip = r.trend_pct === 0
-        ? '<span class="factor-chip steady">📊 steady sales</span>'
+        ? '<span class="factor-chip steady">📊 steady</span>'
         : r.trend_pct > 0
-          ? '<span class="factor-chip trend-up">📈 +' + r.trend_pct + '% trend</span>'
-          : '<span class="factor-chip trend-down">📉 ' + r.trend_pct + '% trend</span>';
+          ? '<span class="factor-chip trend-up">📈 +' + r.trend_pct + '%</span>'
+          : '<span class="factor-chip trend-down">📉 ' + r.trend_pct + '%</span>';
       const weekendChip = r.is_weekend ? '<span class="factor-chip weekend">📅 weekend</span>' : '';
-      const holidayChip2 = r.is_holiday ? '<span class="factor-chip holiday">🎉 ' + r.is_holiday + '</span>' : '';
-      const units = Math.round(r.predicted_demand);
+      const icon = getCategoryIcon(r.category);
 
-      // ---- Product-specific info ----
-      const stock = r.current_stock || 0;
-      const demand = r.predicted_demand || 0;
-      const daysCovered = demand > 0 ? (stock / demand) : 999;
-      let stockChip, advice;
-      if (daysCovered < 1) {
-        stockChip = '<span class="factor-chip" style="background:#FFCDD2;color:#B71C1C;">🚨 Critical stock</span>';
-        advice = '⚠️ Stock is running low — only ' + stock + ' left. Order at least ' + Math.ceil(demand * 3) + ' units urgently.';
-      } else if (daysCovered < 3) {
-        stockChip = '<span class="factor-chip" style="background:#FFE0B2;color:#BF360C;">⚠️ Low stock</span>';
-        advice = 'You have ' + stock + ' in stock — about ' + daysCovered.toFixed(1) + ' days of cover. Recommended order: ~' + Math.ceil(demand * 2) + ' units.';
-      } else if (daysCovered < 7) {
-        stockChip = '<span class="factor-chip" style="background:#FFF3C4;color:#8A6D00;">📦 Moderate stock</span>';
-        advice = 'You have ' + stock + ' in stock — enough for ~' + daysCovered.toFixed(0) + ' days. Consider topping up soon.';
-      } else {
-        stockChip = '<span class="factor-chip" style="background:#C8E6C9;color:#2E7D32;">📦 Stock OK</span>';
-        advice = 'You have ' + stock + ' in stock — plenty for current demand.';
-      }
-
-      // ---- Discount chip ----
-      const disc = discountMap[r.product_id];
-      const discChip = disc
-        ? '<span class="factor-chip" style="background:#FFE0B2;color:#BF360C;">🔥 ' + disc.discount_percent + '% off</span>'
-        : '';
-
-      return '<div class="prediction-card" data-pid="' + r.product_id + '">' +
-        '<div><div class="pc-name">' + r.product_name + '</div>' +
-        '<div class="pc-cat">' + r.category + '</div></div>' +
-        '<div><div class="pc-units">' + units + '</div>' +
-        '<div class="pc-units-label">units</div></div>' +
-        '<button class="pc-predict-btn" type="button">🔮 Predict</button>' +
-        '<div class="pc-reasoning">' +
-          '<div class="pc-sentence">' + r.sentence + '</div>' +
-          '<div class="pc-sentence" style="margin-top:8px;color:#1E4E8C;">' + advice + '</div>' +
-          '<div class="pc-chips">' +
-            '<span class="factor-chip ' + wxClass + '">' + wxIcon + ' ' + r.weather + '</span>' +
-            trendChip + weekendChip + holidayChip2 +
-            '<span class="factor-chip season">🍃 ' + r.season + '</span>' +
-            stockChip + discChip +
-          '</div>' +
+      return '<div class="wts-card">' +
+        '<div class="wts-card-head">' +
+          '<div class="wts-icon">' + icon + '</div>' +
+          '<div class="wts-title"><div class="wts-name">' + r.product_name + '</div>' +
+          '<div class="wts-cat">' + r.category + '</div></div>' +
         '</div>' +
+        '<div class="wts-chips">' +
+          '<span class="factor-chip ' + wxClass + '">' + wxIcon + ' ' + r.weather + '</span>' +
+          trendChip + weekendChip +
+        '</div>' +
+        '<button class="wts-btn" data-pid="' + r.product_id + '" type="button">🔮 Predict</button>' +
       '</div>';
     }).join('');
 
@@ -474,28 +652,21 @@ function renderHorizonResults(el, data, discountMap) {
       '<span class="day-wx">' + wxIcon + ' ' + first.weather + ' · ' + first.temp + '°C</span>' +
       holidayChip +
       '</div>' +
-      cards +
+      '<div class="wts-grid">' + cards + '</div>' +
     '</div>';
   }).join('');
 
-  el.querySelectorAll('.pc-predict-btn').forEach(btn => {
+  // Wire up Predict buttons → open modal
+  el.querySelectorAll('.wts-btn').forEach(btn => {
     btn.onclick = (e) => {
       e.preventDefault();
-      const card = btn.closest('.prediction-card');
-      if (!card) return;
-      const isExpanded = card.classList.contains('expanded');
-      if (isExpanded) {
-        card.classList.remove('expanded');
-        btn.textContent = '🔮 Predict';
-      } else {
-        card.classList.add('expanded');
-        btn.textContent = '✕ Hide reasoning';
-      }
+      const pid = btn.dataset.pid;
+      const row = results.find(x => x.product_id === pid);
+      if (row) openPredictModal(row, discountMap[pid]);
     };
   });
 }
-
-async function openPredictModal(productId, products){
+async function openLegacyPredictModal(productId, products){
   const product = products.find(p => p.id === productId);
   if (!product) return;
 
@@ -588,7 +759,7 @@ async function renderInventory(){
   const inS = products.filter(p => (p.current_stock || 0) > (p.reorder_level || 0));
   const val = products.reduce((s, p) => s + ((p.current_stock || 0) * (p.unit_price || 0)), 0);
   el.innerHTML = '<div class="filter-row" style="margin-bottom:22px;">' +
-      '<button id="record-sale-btn" class="filter-btn active" style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border:none; font-weight:700; padding:10px 20px;">➕ Record a sale</button>' +
+      '<button id="record-sale-btn" class="filter-btn active" style="font-weight:700; padding:10px 20px;">➕ Record a sale</button>' +
       '<button id="add-product-btn" class="filter-btn" style="padding:10px 20px;">➕ Add product</button>' +
       '<button id="update-stock-btn" class="filter-btn" style="padding:10px 20px;">✏️ Update stock</button>' +
       '<button id="refresh-inventory-btn" class="filter-btn" style="padding:10px 20px;">🔄 Refresh</button>' +
@@ -733,15 +904,29 @@ function openUpdateStockModal(products){
 }
 
 /* SUPPLIERS */
-function renderSuppliers(){
+async function renderSuppliers(){
   const el = document.getElementById('view-suppliers');
+  el.innerHTML = '<div class="panel"><p class="sub">Loading suppliers…</p></div>';
 
-  const suppliers = [...(DATA.suppliers || [])].sort((a, b) => b.rating - a.rating);
+  let suppliers = [];
+  try {
+    suppliers = await API.request('/vendors/me/suppliers');
+  } catch (e) {
+    el.innerHTML = '<div class="panel"><h2>Could not load suppliers</h2><p class="sub" style="color:var(--danger);">' + e.message + '</p></div>';
+    return;
+  }
+
+  if (!suppliers || suppliers.length === 0) {
+    el.innerHTML = '<div class="panel"><h2>Supplier directory</h2><p class="sub">No suppliers currently match your product categories.</p></div>';
+    return;
+  }
+
+  suppliers.sort((a, b) => (b.rating || 0) - (a.rating || 0));
 
   el.innerHTML =
     '<div class="panel">' +
       '<h2>Supplier directory</h2>' +
-      '<p class="sub">' + suppliers.length + ' active suppliers across the network.</p>' +
+      '<p class="sub">' + suppliers.length + ' suppliers matching your product categories.</p>' +
       '<div class="table-scroll" style="max-height:600px;">' +
         '<table>' +
           '<thead><tr><th>Supplier</th><th>City</th><th>Category</th><th class="num">Rating</th><th class="num">Lead</th><th>Status</th></tr></thead>' +
@@ -749,10 +934,10 @@ function renderSuppliers(){
             suppliers.map(s =>
               '<tr>' +
                 '<td class="name-cell">' + s.name + '</td>' +
-                '<td>' + s.city + '</td>' +
-                '<td>' + s.category + '</td>' +
-                '<td class="num">' + s.rating.toFixed(1) + '</td>' +
-                '<td class="num">' + s.lead_time + 'd</td>' +
+                '<td>' + (s.city || '—') + '</td>' +
+                '<td>' + (s.category || '—') + '</td>' +
+                '<td class="num">' + ((s.rating || 0)).toFixed(1) + '</td>' +
+                '<td class="num">' + (s.lead_time || 3) + 'd</td>' +
                 '<td><span class="chip low">Active</span></td>' +
               '</tr>'
             ).join('') +
@@ -761,25 +946,3 @@ function renderSuppliers(){
       '</div>' +
     '</div>';
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
