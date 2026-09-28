@@ -1,4 +1,4 @@
-﻿// js/api.js — talks to backend
+// js/api.js — talks to backend
 const API_BASE = 'http://localhost:3000/api';
 
 const API = {

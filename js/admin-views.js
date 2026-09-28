@@ -227,11 +227,11 @@ async function showVendorModal(vendor){
       if (isEdit){
         const res = await API.updateVendor(vendor.id, payload);
         Object.assign(vendor, res.vendor);
-        alert('âœ… Vendor ' + vendor.id + ' updated');
+        alert('✅ Vendor ' + vendor.id + ' updated');
       } else {
         const res = await API.addVendor(payload);
         clearAdminCache();
-        alert('âœ… Vendor ' + payload.id + ' created');
+        alert('✅ Vendor ' + payload.id + ' created');
       }
       overlay.remove();
       renderAdminVendors();
@@ -249,7 +249,7 @@ async function deleteVendor(id){
   try {
     await API.deleteVendor(id);
     clearAdminCache();
-    alert('âœ… Vendor ' + id + ' deleted');
+    alert('✅ Vendor ' + id + ' deleted');
     renderAdminVendors();
   } catch (err){
     alert('âŒ ' + err.message);
@@ -363,7 +363,7 @@ async function renderAdminReports(){
   document.getElementById('adm-export-pdf').onclick = () => {
     const columns = ['Month', 'Revenue', 'Profit', 'Units'];
     const rows = _monthly.map(m => [m.month, fmtR(m.revenue), fmtR(m.profit), fmtNum(m.units)]);
-    exportPDF('Network Annual Report', 'All vendors Â· All cities Â· 2025', columns, rows, 'network-report-' + new Date().toISOString().slice(0,10) + '.pdf');
+    exportPDF('Network Annual Report', 'All vendors · All cities · 2025', columns, rows, 'network-report-' + new Date().toISOString().slice(0,10) + '.pdf');
   };
   document.getElementById('adm-export-csv').onclick = () => {
     const rows = _monthly.map(m => ({Month: m.month, 'Revenue (R)': m.revenue, 'Profit (R)': m.profit, Units: m.units}));
@@ -375,7 +375,7 @@ async function renderAdminReports(){
 
 async function renderAdminPending(){
   const el = document.getElementById('view-adm-pending');
-  el.innerHTML = '<div class="panel"><p class="sub">Loading pending registrationsâ€¦</p></div>';
+  el.innerHTML = '<div class="panel"><p class="sub">Loading pending registrations…</p></div>';
 
   let users = [];
   try {
@@ -391,7 +391,7 @@ async function renderAdminPending(){
         '<h2>Pending registrations</h2>' +
         '<p class="sub">No users are waiting for approval right now.</p>' +
         '<div style="text-align:center; padding:60px 20px;">' +
-          '<div style="font-size:56px;">âœ…</div>' +
+          '<div style="font-size:56px;">✅</div>' +
           '<div style="font-weight:700; font-size:20px; margin-top:14px; color:var(--success);">All caught up</div>' +
           '<div style="color:var(--muted); font-size:14px; margin-top:8px;">New signups will appear here.</div>' +
         '</div>' +
@@ -432,11 +432,11 @@ async function renderAdminPending(){
           '<tbody>' +
             users.map(u =>
               '<tr data-user-id="' + u.id + '">' +
-                '<td class="name-cell">' + (u.name || 'â€”') + '</td>' +
+                '<td class="name-cell">' + (u.name || '—') + '</td>' +
                 '<td>' + u.email + '</td>' +
                 '<td><span class="chip ' + (u.role === 'vendor' ? 'soon' : 'none') + '">' + u.role + '</span></td>' +
-                '<td>' + (u.city || 'â€”') + '</td>' +
-                '<td>' + (u.type || 'â€”') + '</td>' +
+                '<td>' + (u.city || '—') + '</td>' +
+                '<td>' + (u.type || '—') + '</td>' +
                 '<td class="num">' + new Date(u.created_at).toLocaleDateString('en-ZA') + '</td>' +
                 '<td style="display:flex; gap:6px;">' +
                   '<button class="filter-btn review-btn" data-id="' + u.id + '" data-role="' + u.role + '" data-name="' + (u.name || '').replace(/"/g,'&quot;') + '" data-email="' + u.email + '" data-city="' + (u.city || '') + '" data-type="' + (u.type || '') + '" data-created="' + (u.created_at || '') + '" style="background:linear-gradient(135deg,#1E4E8C,#2E6FBF); color:#fff; border:none;">Review</button>' +
@@ -465,7 +465,7 @@ async function renderAdminPending(){
     btn.onclick = async () => {
       if (!confirm('Reject and delete this user? This cannot be undone.')) return;
       btn.disabled = true;
-      btn.textContent = 'â€¦';
+      btn.textContent = '…';
       try {
         await API.rejectUser(btn.dataset.id);
         renderAdminPending();
@@ -484,7 +484,7 @@ async function openReviewModal(user){
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
 
-  const roleIcon = user.role === 'vendor' ? 'ðŸª' : 'ðŸšš';
+  const roleIcon = user.role === 'vendor' ? 'ðŸª' : '🚚';
   const roleLabel = user.role === 'vendor' ? 'Vendor store' : 'Supplier';
 
   overlay.innerHTML = '<div style="background:#FBF8EF; border:1px solid rgba(0,0,0,0.15); border-radius:20px; max-width:560px; width:100%; padding:32px; max-height:90vh; overflow-y:auto;">' +
@@ -493,7 +493,7 @@ async function openReviewModal(user){
       '<div>' +
         '<h2 style="font-family:\'Space Grotesk\'; font-size:22px; margin:0 0 4px; color:#000;">Approve registration</h2>' +
         '<p style="font-size:13px; color:#4A4A4A; margin:0;">' +
-          '<strong>' + (user.name || 'â€”') + '</strong> Â· ' + user.email +
+          '<strong>' + (user.name || '—') + '</strong> · ' + user.email +
         '</p>' +
       '</div>' +
     '</div>' +
@@ -502,9 +502,9 @@ async function openReviewModal(user){
       '<div style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:#6B6B6B; font-weight:600; margin-bottom:10px;">' + roleLabel + ' details</div>' +
       '<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">' +
         '<div><div style="font-size:11px; color:#6B6B6B;">Role</div><div style="font-weight:600; color:#000;">' + user.role + '</div></div>' +
-        '<div><div style="font-size:11px; color:#6B6B6B;">City</div><div style="font-weight:600; color:#000;">' + (user.city || 'â€”') + '</div></div>' +
-        '<div><div style="font-size:11px; color:#6B6B6B;">Type / Category</div><div style="font-weight:600; color:#000;">' + (user.type || 'â€”') + '</div></div>' +
-        '<div><div style="font-size:11px; color:#6B6B6B;">Signed up</div><div style="font-weight:600; color:#000;">' + (user.created_at ? new Date(user.created_at).toLocaleDateString('en-ZA') : 'â€”') + '</div></div>' +
+        '<div><div style="font-size:11px; color:#6B6B6B;">City</div><div style="font-weight:600; color:#000;">' + (user.city || '—') + '</div></div>' +
+        '<div><div style="font-size:11px; color:#6B6B6B;">Type / Category</div><div style="font-weight:600; color:#000;">' + (user.type || '—') + '</div></div>' +
+        '<div><div style="font-size:11px; color:#6B6B6B;">Signed up</div><div style="font-weight:600; color:#000;">' + (user.created_at ? new Date(user.created_at).toLocaleDateString('en-ZA') : '—') + '</div></div>' +
       '</div>' +
     '</div>' +
 
@@ -529,7 +529,7 @@ async function openReviewModal(user){
     errorEl.textContent = '';
     const btn = overlay.querySelector('#review-approve');
     btn.disabled = true;
-    btn.textContent = 'Approvingâ€¦';
+    btn.textContent = 'Approving…';
 
     try {
       await API.approveUser(user.id);
